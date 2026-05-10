@@ -1,4 +1,4 @@
-package com.gabriela.store.store;
+package com.gabriela.store;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

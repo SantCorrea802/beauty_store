@@ -1,4 +1,4 @@
-package com.gabriela.store.store;
+package com.gabriela.store;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
