@@ -10,7 +10,7 @@ import java.time.OffsetDateTime;
 
 @Getter
 @Entity
-@Table(name = "usuarios_admin")
+@Table(name = "usuario_admin")
 @NoArgsConstructor(access = AccessLevel.PROTECTED) // Construtor protegido para uso de JPA
 public class UsuarioAdmin {
     @Id
