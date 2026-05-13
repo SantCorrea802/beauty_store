@@ -1,12 +1,14 @@
 package com.gabriela.store.category;
 
 
+import com.gabriela.store.product.ProductoCategoria;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Entity
