@@ -9,5 +9,5 @@ public interface ProductoAuditLogRepository extends JpaRepository<ProductoAuditL
     List<ProductoAuditLog> findByProducto_IdProductoOrderByFechaEventoDesc(Long idProducto);
 
     // Funcion que devuelve el historial de auditoria de un usuario ordenado por fecha descendente
-    List<ProductoAuditLog> findByUsuario_IdUsuarioOrderByFechaEventoDesc(Long idUsuario);
+    List<ProductoAuditLog> findByUsuarioAdmin_IdUsuarioOrderByFechaEventoDesc(Long idUsuario);
 }
