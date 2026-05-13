@@ -1,6 +1,7 @@
 package com.gabriela.store.product;
 
 
+import com.gabriela.store.image.ImagenProducto;
 import com.gabriela.store.user.UsuarioAdmin;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -59,7 +60,7 @@ public class Producto {
     private List<ProductoCategoria> categorias = new ArrayList<>();
 
     @OneToMany(mappedBy = "producto")
-    private List<ProductoImagen> imagenes = new ArrayList<>();
+    private List<ImagenProducto> imagenes = new ArrayList<>();
 
     public Producto(String nombreProducto, BigDecimal precio, String descripcion, String slug, String marca, UsuarioAdmin creadoPor) {
         this.nombreProducto = nombreProducto;
