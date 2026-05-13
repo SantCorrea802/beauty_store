@@ -1,7 +1,7 @@
 package com.gabriela.store.product;
 
-
-
+import com.gabriela.store.category.dto.CategoryResponse;
+import com.gabriela.store.product.dto.ProductDetailResponse;
 import com.gabriela.store.product.dto.ProductResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,9 +17,32 @@ public class ProductoService {
         this.productoRepository = productoRepository;
     }
 
+    @Transactional(readOnly = true)
+    public List<ProductResponse> findAllActive() {
+        return productoRepository.findByActivoTrue()
+                .stream()
+                .map(this::toSummaryResponse)
+                .toList();
+    }
 
-    // creando tu response
-    private ProductResponse toResponse(Producto producto) {
+    @Transactional(readOnly = true)
+    public List<ProductResponse> findAllActiveByCategory(String categorySlug) {
+        return productoRepository.findActiveByCategorySlug(categorySlug)
+                .stream()
+                .map(this::toSummaryResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ProductDetailResponse findBySlug(String slug) {
+        Producto producto = productoRepository.findBySlugWithCategories(slug)
+                .filter(Producto::isActivo)
+                .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado: " + slug));
+
+        return toDetailResponse(producto);
+    }
+
+    private ProductResponse toSummaryResponse(Producto producto) {
         return new ProductResponse(
                 producto.getIdProducto(),
                 producto.getNombreProducto(),
@@ -31,17 +54,26 @@ public class ProductoService {
         );
     }
 
-    @Transactional(readOnly = true)
-    public List<ProductResponse> findAllActive() {
-        return productoRepository.findByActivoTrue().stream().map(this::toResponse).toList();
+    private ProductDetailResponse toDetailResponse(Producto producto) {
+        List<CategoryResponse> categorias = producto.getCategorias()
+                .stream()
+                .map(ProductoCategoria::getCategoria)
+                .map(categoria -> new CategoryResponse(
+                        categoria.getIdCategoria(),
+                        categoria.getNombre(),
+                        categoria.getSlug()
+                ))
+                .toList();
+
+        return new ProductDetailResponse(
+                producto.getIdProducto(),
+                producto.getNombreProducto(),
+                producto.getPrecio(),
+                producto.getDescripcion(),
+                producto.getSlug(),
+                producto.isActivo(),
+                producto.getMarca(),
+                categorias
+        );
     }
-
-    @Transactional(readOnly = true)
-    public ProductResponse findBySlug(String slug) {
-        Producto producto = productoRepository.findBySlug(slug).filter(Producto::isActivo)
-                .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado o inactivo: "+ slug));
-        return toResponse(producto);
-    }
-
-
 }
