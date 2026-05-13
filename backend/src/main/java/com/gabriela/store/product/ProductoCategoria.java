@@ -21,11 +21,11 @@ public class ProductoCategoria {
     @Column(name="id_producto_categoria")
     private Long idProductoCategoria;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name="id_producto", nullable = false)
     private Producto producto;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name="id_categoria", nullable = false)
     private Categoria categoria;
 
