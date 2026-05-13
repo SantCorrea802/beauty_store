@@ -1,6 +1,7 @@
 package com.gabriela.store.product;
 
 import com.gabriela.store.category.dto.CategoryResponse;
+import com.gabriela.store.common.exception.NotFoundException;
 import com.gabriela.store.product.dto.ProductDetailResponse;
 import com.gabriela.store.product.dto.ProductResponse;
 import org.springframework.stereotype.Service;
@@ -41,7 +42,7 @@ public class ProductoService {
     public ProductDetailResponse findBySlug(String slug) {
         Producto producto = productoRepository.findBySlugWithCategories(slug)
                 .filter(Producto::isActivo)
-                .orElseThrow(() -> new IllegalArgumentException("Producto no encontrado: " + slug));
+                .orElseThrow(() -> new NotFoundException("Producto no encontrado: " + slug));
 
         return toDetailResponse(producto);
     }
