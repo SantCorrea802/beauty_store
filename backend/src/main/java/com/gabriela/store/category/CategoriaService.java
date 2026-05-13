@@ -19,7 +19,7 @@ public class CategoriaService {
     public List<CategoryResponse> findAll() {
         return categoriaRepository.findAll().stream()
                 .map(categoria -> new CategoryResponse(
-                        categoria.getId(),
+                        categoria.getIdCategoria(),
                         categoria.getNombre(),
                         categoria.getSlug()
                 ))
