@@ -11,7 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/admin/productos")
+@RequestMapping("/api/admin/products")
 public class ProductoAdminController {
     private final ProductoService productoService;
 

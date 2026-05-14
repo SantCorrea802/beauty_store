@@ -86,7 +86,7 @@ public class ProductoService {
             throw new BadRequestException("Una o más categorías no existen.");
         }
 
-        String slug = generateUniqueSlug(request.name());
+        String slug = generateUniqueSlug(request.nombre());
 
         // Temporal: mientras no exista autenticación real, usamos el primer admin.
         UsuarioAdmin admin = usuarioAdminRepository.findAll()
@@ -95,9 +95,9 @@ public class ProductoService {
                 .orElseThrow(() -> new BadRequestException("No existe un usuario admin para asociar la creación del producto."));
 
         Producto producto = new Producto(
-                request.name().trim(),
-                request.price(),
-                normalizeNullableText(request.description()),
+                request.nombre().trim(),
+                request.precio(),
+                normalizeNullableText(request.descripcion()),
                 slug,
                 normalizeNullableText(request.marca()),
                 admin
