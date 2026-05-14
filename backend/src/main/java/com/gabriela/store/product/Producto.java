@@ -69,6 +69,7 @@ public class Producto {
         this.slug = slug;
         this.marca = marca;
         this.creadoPor = creadoPor;
+        this.actualizadoPor = creadoPor;
         this.activo = true;
     }
 
