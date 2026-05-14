@@ -23,8 +23,8 @@ public class SlugUtils {
                 .replaceAll("\\s+", "-")
                 .replaceAll("-+", "-");
     }
-    }
-
-
-
 }
+
+
+
+
