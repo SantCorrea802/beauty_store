@@ -118,10 +118,15 @@ public class ProductoService {
                 "Producto creado desde API admin."
         ));
 
-        Producto productWithCategories = productoRepository.findBySlugWithCategories(savedProduct.getSlug())
-                .orElseThrow(() -> new NotFoundException("Producto creado pero no pudo recuperarse: " + savedProduct.getSlug()));
+        List<ProductoCategoria> savedRelations =
+                productoCategoriaRepository.findByProducto_IdProducto(savedProduct.getIdProducto());
 
-        return toDetailResponse(productWithCategories);
+        return toDetailResponse(savedProduct, savedRelations);
+    }
+
+
+    private ProductDetailResponse toDetailResponse(Producto producto) {
+        return toDetailResponse(producto, producto.getCategorias());
     }
 
 
@@ -190,8 +195,8 @@ public class ProductoService {
 
 
     // este metodo convierte un producto a un formato de respuesta mas detallado, incluyendo las categorias asociadas, para ser utilizado en la vista de detalle del producto
-    private ProductDetailResponse toDetailResponse(Producto producto) {
-        List<CategoryResponse> categorias = producto.getCategorias()
+    private ProductDetailResponse toDetailResponse(Producto producto, List<ProductoCategoria> relaciones) {
+        List<CategoryResponse> categorias = relaciones
                 .stream()
                 .map(ProductoCategoria::getCategoria)
                 .map(categoria -> new CategoryResponse(
@@ -200,7 +205,6 @@ public class ProductoService {
                         categoria.getSlug()
                 ))
                 .toList();
-
 
         return new ProductDetailResponse(
                 producto.getIdProducto(),
