@@ -11,6 +11,7 @@ public interface ProductoRepository extends JpaRepository<Producto, Long> {
     Optional<Producto> findBySlug(String slug);
     boolean existsBySlug(String slug);
     List<Producto> findByActivoTrue();
+    boolean existsBySlugAndIdProductoNot(String slug, Long idProducto);
 
     // en el siguiente query se hace un left join fetch para cargar las categorias asociadas al producto, y se filtra por el slug del producto
     @Query("""

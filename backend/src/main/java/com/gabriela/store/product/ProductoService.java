@@ -12,6 +12,7 @@ import com.gabriela.store.common.text.SlugUtils;
 import com.gabriela.store.product.dto.ProductCreateRequest;
 import com.gabriela.store.product.dto.ProductDetailResponse;
 import com.gabriela.store.product.dto.ProductResponse;
+import com.gabriela.store.product.dto.ProductUpdateRequest;
 import com.gabriela.store.user.UsuarioAdmin;
 import com.gabriela.store.user.UsuarioAdminRepository;
 import org.springframework.stereotype.Service;
@@ -216,5 +217,93 @@ public class ProductoService {
                 producto.getMarca(),
                 categorias
         );
+    }
+
+
+    // este metodo actualiza un producto existente, recibe el id del producto a actualizar
+    // y un objeto ProductUpdateRequest con los nuevos datos del producto, valida que el
+    // producto exista, que las categorias existan y no haya categorias duplicadas, genera
+    // un slug unico para la actualizacion, actualiza los datos del producto, guarda el producto
+    // y las nuevas relaciones con las categorias, y finalmente devuelve el producto actualizado
+    // en formato de respuesta detallada, ademas registra la actualizacion en el log de
+    // auditoria con el usuario admin que realizo la actualizacion, y una descripcion
+    // de la accion realizada
+    @Transactional
+    public ProductDetailResponse update(Long idProducto, ProductUpdateRequest request) {
+        validateUniqueCategoryIds(request.categoriaIds());
+
+        Producto producto = productoRepository.findById(idProducto)
+                .orElseThrow(() -> new NotFoundException("Producto no encontrado con id: " + idProducto));
+
+        List<Categoria> categorias = categoriaRepository.findAllById(request.categoriaIds());
+
+        if (categorias.size() != request.categoriaIds().size()) {
+            throw new BadRequestException("Una o más categorías no existen.");
+        }
+
+        UsuarioAdmin admin = usuarioAdminRepository.findAll()
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new BadRequestException("No existe un usuario admin para asociar la edición del producto."));
+
+        String slug = generateUniqueSlugForUpdate(request.nombre(), producto.getIdProducto());
+
+        producto.actualizarDatos(
+                request.nombre().trim(),
+                request.precio(),
+                normalizeNullableText(request.descripcion()),
+                normalizeNullableText(request.marca()),
+                slug,
+                admin
+        );
+
+
+        Producto savedProduct = productoRepository.save(producto);
+
+        productoCategoriaRepository.deleteAllByProductoId(savedProduct.getIdProducto());
+        productoCategoriaRepository.flush();
+
+        List<ProductoCategoria> nuevasRelaciones = categorias.stream()
+                .map(categoria -> new ProductoCategoria(savedProduct, categoria))
+                .toList();
+
+        productoCategoriaRepository.saveAll(nuevasRelaciones);
+
+        productoAuditLogRepository.save(new ProductoAuditLog(
+                savedProduct,
+                admin,
+                AuditAction.UPDATED,
+                "Producto actualizado desde API admin."
+        ));
+
+        List<ProductoCategoria> savedRelations =
+                productoCategoriaRepository.findByProducto_IdProducto(savedProduct.getIdProducto());
+
+        return toDetailResponse(savedProduct, savedRelations);
+    }
+
+
+    // este metodo genera un slug unico para la actualizacion de un producto,
+    // recibe el nuevo nombre del producto y el id del producto que se esta actualizando,
+    // genera un slug base a partir del nuevo nombre, y luego verifica si ese slug ya existe
+    // en la base de datos para otro producto diferente al que se esta actualizando,
+    // si existe un conflicto de slug, agrega un sufijo numerico al slug base hasta
+    // encontrar un slug unico, y devuelve el slug unico generado, esto garantiza que al
+    // actualizar el nombre de un producto, el slug se mantenga unico y no haya conflictos
+    // con otros productos, incluso si el nuevo nombre es similar o igual al de otro producto,
+    // el slug se ajustara automaticamente para evitar conflictos y mantener la
+    // integridad de los slugs en la base de datos.
+    private String generateUniqueSlugForUpdate(String nombre, Long currentProductId) {
+        String baseSlug = SlugUtils.toSlug(nombre);
+
+        String candidate = baseSlug;
+        int suffix = 2;
+
+        while (productoRepository.existsBySlugAndIdProductoNot(candidate, currentProductId)) {
+            candidate = baseSlug + "-" + suffix;
+            suffix++;
+        }
+
+        return candidate;
     }
 }

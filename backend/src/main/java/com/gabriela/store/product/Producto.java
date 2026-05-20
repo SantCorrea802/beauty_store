@@ -86,4 +86,19 @@ public class Producto {
     }
 
 
+    public void actualizarDatos(
+            String nombreProducto,
+            BigDecimal precio,
+            String descripcion,
+            String marca,
+            String slug,
+            UsuarioAdmin actualizadoPor
+    ) {
+        this.nombreProducto = nombreProducto;
+        this.precio = precio;
+        this.descripcion = descripcion;
+        this.marca = marca;
+        this.slug = slug;
+        this.actualizadoPor = actualizadoPor;
+    }
 }
