@@ -9,6 +9,9 @@ import com.gabriela.store.category.dto.CategoryResponse;
 import com.gabriela.store.common.exception.BadRequestException;
 import com.gabriela.store.common.exception.NotFoundException;
 import com.gabriela.store.common.text.SlugUtils;
+import com.gabriela.store.image.ImagenProducto;
+import com.gabriela.store.image.ImagenProductoRepository;
+import com.gabriela.store.image.dto.ImageResponse;
 import com.gabriela.store.product.dto.ProductCreateRequest;
 import com.gabriela.store.product.dto.ProductDetailResponse;
 import com.gabriela.store.product.dto.ProductResponse;
@@ -29,19 +32,22 @@ public class ProductoService {
     private final ProductoCategoriaRepository productoCategoriaRepository;
     private final ProductoAuditLogRepository productoAuditLogRepository;
     private final UsuarioAdminRepository usuarioAdminRepository;
+    private final ImagenProductoRepository imagenProductoRepository;
 
     public ProductoService(
             ProductoRepository productoRepository,
             CategoriaRepository categoriaRepository,
             ProductoCategoriaRepository productoCategoriaRepository,
             ProductoAuditLogRepository productoAuditLogRepository,
-            UsuarioAdminRepository usuarioAdminRepository
+            UsuarioAdminRepository usuarioAdminRepository,
+            ImagenProductoRepository imagenProductoRepository
     ) {
         this.productoRepository = productoRepository;
         this.categoriaRepository = categoriaRepository;
         this.productoCategoriaRepository = productoCategoriaRepository;
         this.productoAuditLogRepository = productoAuditLogRepository;
         this.usuarioAdminRepository = usuarioAdminRepository;
+        this.imagenProductoRepository = imagenProductoRepository;
     }
     // el siguiente metodo devuelve los productos activos
     @Transactional(readOnly = true)
@@ -183,6 +189,11 @@ public class ProductoService {
 
     // aqui se convierten los productos a un formato de respuesta mas simple, sin las categorias asociadas, para ser utilizado en la lista de productos
     private ProductResponse toSummaryResponse(Producto producto) {
+        String imagenPrincipalUrl = imagenProductoRepository
+                .findByProducto_IdProductoAndPrincipalTrue(producto.getIdProducto())
+                .map(ImagenProducto::getUrl)
+                .orElse(null);
+
         return new ProductResponse(
                 producto.getIdProducto(),
                 producto.getNombreProducto(),
@@ -190,7 +201,8 @@ public class ProductoService {
                 producto.getDescripcion(),
                 producto.getSlug(),
                 producto.isActivo(),
-                producto.getMarca()
+                producto.getMarca(),
+                imagenPrincipalUrl
         );
     }
 
@@ -207,6 +219,12 @@ public class ProductoService {
                 ))
                 .toList();
 
+        List<ImageResponse> imagenes = imagenProductoRepository
+                .findByProducto_IdProductoOrderByOrdenAsc(producto.getIdProducto())
+                .stream()
+                .map(this::toImageResponse)
+                .toList();
+
         return new ProductDetailResponse(
                 producto.getIdProducto(),
                 producto.getNombreProducto(),
@@ -215,10 +233,24 @@ public class ProductoService {
                 producto.getSlug(),
                 producto.isActivo(),
                 producto.getMarca(),
-                categorias
+                categorias,
+                imagenes
         );
     }
 
+
+    // este metodo convierte una entidad de imagen de producto a un formato de respuesta,
+    // para ser utilizado en la vista de detalle del producto, incluye el id de la imagen,
+    // la url, el orden, si es principal o no, y el texto alternativo
+    private ImageResponse toImageResponse(ImagenProducto imagen) {
+        return new ImageResponse(
+                imagen.getIdImagen(),
+                imagen.getUrl(),
+                imagen.getOrden(),
+                imagen.isPrincipal(),
+                imagen.getAltText()
+        );
+    }
 
     // este metodo actualiza un producto existente, recibe el id del producto a actualizar
     // y un objeto ProductUpdateRequest con los nuevos datos del producto, valida que el
