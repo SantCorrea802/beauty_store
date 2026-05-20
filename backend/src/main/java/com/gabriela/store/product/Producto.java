@@ -101,4 +101,28 @@ public class Producto {
         this.slug = slug;
         this.actualizadoPor = actualizadoPor;
     }
+
+
+    // metodos para "eliminar" (desactivar y activar) un producto, en vez de eliminarlo
+    // fisicamente de la base de datos, se cambia su estado a activo o inactivo,
+    // y se registra el usuario que hizo el cambio
+    public boolean desactivar(UsuarioAdmin actualizadoPor) {
+        if (!this.activo) {
+            return false;
+        }
+
+        this.activo = false;
+        this.actualizadoPor = actualizadoPor;
+        return true;
+    }
+
+    public boolean activar(UsuarioAdmin actualizadoPor) {
+        if (this.activo) {
+            return false;
+        }
+
+        this.activo = true;
+        this.actualizadoPor = actualizadoPor;
+        return true;
+    }
 }
