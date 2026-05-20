@@ -306,4 +306,75 @@ public class ProductoService {
 
         return candidate;
     }
+
+
+
+    // este metodo desactiva un producto existente, recibe el id del producto a desactivar,
+    // valida que el producto exista, cambia su estado a inactivo, guarda el producto,
+    // y finalmente devuelve el producto desactivado en formato de respuesta detallada,
+    // ademas registra la desactivacion en el log de auditoria con el usuario admin que
+    // realizo la desactivacion, y una descripcion de la accion realizada
+    @Transactional
+    public ProductDetailResponse deactivate(Long idProducto) {
+        Producto producto = productoRepository.findById(idProducto)
+                .orElseThrow(() -> new NotFoundException("Producto no encontrado con id: " + idProducto));
+
+        UsuarioAdmin admin = usuarioAdminRepository.findAll()
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new BadRequestException("No existe un usuario admin para asociar la desactivación del producto."));
+
+        boolean changed = producto.desactivar(admin);
+
+        Producto savedProduct = productoRepository.save(producto);
+
+        if (changed) {
+            productoAuditLogRepository.save(new ProductoAuditLog(
+                    savedProduct,
+                    admin,
+                    AuditAction.DEACTIVATED,
+                    "Producto desactivado desde API admin."
+            ));
+        }
+
+        List<ProductoCategoria> relaciones =
+                productoCategoriaRepository.findByProducto_IdProducto(savedProduct.getIdProducto());
+
+        return toDetailResponse(savedProduct, relaciones);
+    }
+
+    // este metodo activa un producto existente, recibe el id del producto a activar,
+    // valida que el producto exista, cambia su estado a activo, guarda el producto,
+    // y finalmente devuelve el producto activado en formato de respuesta detallada,
+    // ademas registra la activacion en el log de auditoria con el usuario admin que
+    // realizo la activacion, y una descripcion de la accion realizada
+
+    @Transactional
+    public ProductDetailResponse activate(Long idProducto) {
+        Producto producto = productoRepository.findById(idProducto)
+                .orElseThrow(() -> new NotFoundException("Producto no encontrado con id: " + idProducto));
+
+        UsuarioAdmin admin = usuarioAdminRepository.findAll()
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new BadRequestException("No existe un usuario admin para asociar la reactivación del producto."));
+
+        boolean changed = producto.activar(admin);
+
+        Producto savedProduct = productoRepository.save(producto);
+
+        if (changed) {
+            productoAuditLogRepository.save(new ProductoAuditLog(
+                    savedProduct,
+                    admin,
+                    AuditAction.REACTIVATED,
+                    "Producto reactivado desde API admin."
+            ));
+        }
+
+        List<ProductoCategoria> relaciones =
+                productoCategoriaRepository.findByProducto_IdProducto(savedProduct.getIdProducto());
+
+        return toDetailResponse(savedProduct, relaciones);
+    }
 }

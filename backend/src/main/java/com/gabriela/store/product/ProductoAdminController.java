@@ -33,4 +33,22 @@ public class ProductoAdminController {
     ) {
         return productoService.update(id, request);
     }
+
+
+    // endpoint para activar/desactivar producto, en vez de eliminarlo,
+    // para mantener el historial de auditoría y evitar problemas de integridad referencial
+    // con otras entidades (como categorías o imágenes)
+    @PatchMapping("/{id}/deactivate")
+    public ProductDetailResponse deactivate(@PathVariable Long id) {
+        return productoService.deactivate(id);
+    }
+
+
+    // endpoint para activar/desactivar producto, en vez de eliminarlo,
+    // para mantener el historial de auditoría y evitar problemas de integridad referencial
+    // con otras entidades (como categorías o imágenes)
+    @PatchMapping("/{id}/activate")
+    public ProductDetailResponse activate(@PathVariable Long id) {
+        return productoService.activate(id);
+    }
 }
