@@ -8,7 +8,8 @@ public record ProductResponse(
         BigDecimal precio,
         String descripcion,
         String slug,
-        Boolean activo,
-        String marca
+        boolean activo,
+        String marca,
+        String imagenPrincipalUrl
 ) {
 }
