@@ -2,28 +2,46 @@
 
 Backend REST para una tienda de productos de belleza, maquillaje, cuidado capilar e higiene personal.
 
-El backend permite consultar productos y categorías públicamente, y administrar productos temporalmente mediante endpoints abiertos para desarrollo local.
+Actualmente permite:
+
+```text
+- Consultar categorías.
+- Consultar productos activos.
+- Filtrar productos por categoría.
+- Consultar detalle de producto por slug.
+- Crear productos.
+- Editar productos.
+- Activar/desactivar productos.
+- Agregar imágenes por URL.
+- Eliminar imágenes.
+- Marcar una imagen como principal.
+- Registrar auditoría básica de productos.
+```
+
+La subida real de archivos a Cloudinary todavía está pendiente. Por ahora las imágenes se registran mediante URL.
 
 ---
 
 ## Stack técnico
 
-- Java 17
-- Spring Boot 3.5.x
-- Maven
-- Spring Web
-- Spring Data JPA
-- Spring Security
-- PostgreSQL
-- Flyway
-- Lombok
-- Docker Compose
+```text
+Java 17
+Spring Boot 3.5.x
+Maven
+Spring Web
+Spring Data JPA
+Spring Security
+PostgreSQL
+Flyway
+Lombok
+Docker Compose
+```
 
 ---
 
-## Arquitectura actual
+## Arquitectura
 
-Flujo general de una petición:
+Flujo general:
 
 ```text
 Cliente HTTP / Postman / Frontend
@@ -39,41 +57,42 @@ JPA / Hibernate
 PostgreSQL
 ```
 
-Responsabilidades principales:
+Responsabilidades:
 
 ```text
-Controller
+Controller:
 - Expone endpoints HTTP.
 - Recibe JSON.
 - Valida DTOs con @Valid.
 - Devuelve respuestas JSON.
 
-Service
-- Contiene la lógica de negocio.
-- Valida existencia de productos/categorías.
+Service:
+- Contiene lógica de negocio.
+- Valida productos, categorías e imágenes.
 - Genera slugs.
 - Crea, actualiza, activa y desactiva productos.
+- Administra imágenes.
 - Registra auditoría.
 
-Repository
-- Accede a la base de datos usando Spring Data JPA.
+Repository:
+- Accede a PostgreSQL mediante Spring Data JPA.
 
-DTOs
-- Definen los datos de entrada y salida de la API.
+DTOs:
+- Definen entradas y salidas de la API.
 - Evitan exponer directamente entidades JPA.
 
-Flyway
+Flyway:
 - Crea y versiona el esquema de base de datos.
 
-Hibernate
-- Valida que las entidades coincidan con las tablas.
+Hibernate:
+- Valida que las entidades coincidan con el esquema.
 ```
 
 ---
 
 ## Modelo de datos principal
 
-Tablas actuales:
+Tablas:
 
 ```text
 usuario_admin
@@ -95,7 +114,7 @@ usuario_admin 1:N producto_audit_log
 usuario_admin 1:N producto como creado_por / actualizado_por
 ```
 
-La relación muchos a muchos entre productos y categorías se resuelve mediante:
+La relación muchos a muchos entre productos y categorías se maneja con:
 
 ```text
 producto_categoria
@@ -107,7 +126,7 @@ producto_categoria
 
 ### 1. Variables de entorno
 
-Crear un archivo `.env` dentro de `backend/` usando como base `.env.example`.
+Crear `backend/.env` usando como base `backend/.env.example`.
 
 Ejemplo:
 
@@ -134,7 +153,7 @@ Desde `backend/`:
 docker compose up -d
 ```
 
-Verificar contenedor:
+Verificar:
 
 ```bash
 docker compose ps
@@ -164,39 +183,11 @@ http://localhost:8080
 
 ---
 
-## Configuración importante
-
-`application.properties` usa variables de entorno:
-
-```properties
-spring.application.name=store
-
-spring.datasource.url=${DB_URL}
-spring.datasource.username=${DB_USERNAME}
-spring.datasource.password=${DB_PASSWORD}
-
-spring.jpa.hibernate.ddl-auto=validate
-spring.jpa.show-sql=true
-spring.jpa.open-in-view=false
-
-spring.flyway.enabled=true
-```
-
-Punto clave:
-
-```text
-spring.jpa.hibernate.ddl-auto=validate
-```
-
-Hibernate no crea ni modifica tablas. Solo valida que las entidades Java coincidan con el esquema creado por Flyway.
-
----
-
 ## Seguridad actual
 
 Spring Security está instalado.
 
-Durante desarrollo local, temporalmente están permitidos:
+Durante desarrollo local están permitidos temporalmente:
 
 ```text
 /api/categories/**
@@ -212,7 +203,108 @@ Pendiente:
 - Login admin
 - JWT
 - Protección real de /api/admin/**
-- Gestión segura de usuarios administradores
+```
+
+---
+
+# Cómo saber qué IDs o slugs usar
+
+Antes de probar endpoints administrativos, puedes consultar estos datos en SQL.
+
+## Obtener IDs de productos
+
+```sql
+SELECT id_producto, nombre_producto, slug, activo
+FROM producto
+ORDER BY id_producto;
+```
+
+Usa:
+
+```text
+id_producto → para endpoints con {id}
+slug        → para GET /api/products/{slug}
+```
+
+Ejemplo:
+
+```text
+id_producto = 2
+slug = labial-negro-mate
+```
+
+Entonces usarías:
+
+```http
+PUT /api/admin/products/2
+GET /api/products/labial-negro-mate
+```
+
+---
+
+## Obtener IDs de categorías
+
+```sql
+SELECT id_categoria, nombre, slug
+FROM categoria
+ORDER BY id_categoria;
+```
+
+Usa:
+
+```text
+id_categoria → para categoriaIds en POST/PUT de producto
+slug         → para filtrar productos por categoría
+```
+
+Ejemplo:
+
+```text
+id_categoria = 1
+slug = maquillaje
+```
+
+Entonces usarías:
+
+```
+"categoriaIds": [1]
+```
+
+y:
+
+```http
+GET /api/products?category=maquillaje
+```
+
+---
+
+## Obtener IDs de imágenes
+
+```sql
+SELECT id_imagen, id_producto, url, orden, principal, alt_text
+FROM imagen_producto
+ORDER BY id_producto, orden;
+```
+
+Usa:
+
+```text
+id_imagen → para endpoints con {imageId}
+id_producto → para endpoints con {id}
+```
+
+Ejemplo:
+
+```text
+id_producto = 2
+id_imagen = 5
+```
+
+Entonces usarías:
+
+```http
+PATCH /api/admin/products/2/images/5/main
+DELETE /api/admin/products/2/images/5
 ```
 
 ---
@@ -284,9 +376,11 @@ No requiere body.
 
 Notas:
 
-- Solo devuelve productos activos.
-- Solo incluye la imagen principal del producto.
-- `imagenPrincipalUrl` puede venir en `null` si el producto no tiene imagen principal registrada.
+```text
+- Solo aparecen productos activos.
+- Solo se devuelve la imagen principal.
+- imagenPrincipalUrl puede ser null si el producto no tiene imagen principal.
+```
 
 ---
 
@@ -298,7 +392,7 @@ Notas:
 GET /api/products?category=maquillaje
 ```
 
-El parámetro `category` recibe el `slug` de la categoría.
+`category` debe ser el `slug` de la categoría, no el ID.
 
 ### Body
 
@@ -337,6 +431,8 @@ Ejemplo:
 GET /api/products/labial-negro-mate
 ```
 
+`{slug}` sale de la columna `producto.slug`.
+
 ### Body
 
 No requiere body.
@@ -366,7 +462,7 @@ No requiere body.
   ],
   "imagenes": [
     {
-      "id": 1,
+      "id": 5,
       "url": "https://res.cloudinary.com/demo/image/upload/sample.jpg",
       "orden": 0,
       "principal": true,
@@ -385,10 +481,6 @@ No requiere body.
 ```http
 GET /api/products/no-existe
 ```
-
-### Body
-
-No requiere body.
 
 ### Respuesta esperada
 
@@ -427,6 +519,16 @@ Content-Type: application/json
 }
 ```
 
+`categoriaIds` debe contener IDs reales de la tabla `categoria`.
+
+Para consultarlos:
+
+```sql
+SELECT id_categoria, nombre, slug
+FROM categoria
+ORDER BY id_categoria;
+```
+
 ### Respuesta esperada
 
 ```json
@@ -462,10 +564,10 @@ Content-Type: application/json
 Efectos esperados:
 
 ```text
-- Inserta un registro en producto.
+- Inserta en producto.
 - Inserta relaciones en producto_categoria.
 - Genera slug automáticamente.
-- Registra auditoría CREATED en producto_audit_log.
+- Registra auditoría CREATED.
 ```
 
 ---
@@ -486,6 +588,8 @@ Ejemplo:
 ```http
 PUT /api/admin/products/2
 ```
+
+`{id}` debe ser `producto.id_producto`.
 
 ### Body
 
@@ -522,15 +626,7 @@ PUT /api/admin/products/2
       "slug": "labios"
     }
   ],
-  "imagenes": [
-    {
-      "id": 1,
-      "url": "https://res.cloudinary.com/demo/image/upload/sample.jpg",
-      "orden": 0,
-      "principal": true,
-      "altText": "Labial negro mate"
-    }
-  ]
+  "imagenes": []
 }
 ```
 
@@ -538,16 +634,14 @@ Efectos esperados:
 
 ```text
 - Actualiza datos del producto.
-- Reemplaza las categorías anteriores por las nuevas.
+- Reemplaza categorías anteriores.
 - Regenera slug si cambió el nombre.
-- Registra auditoría UPDATED en producto_audit_log.
+- Registra auditoría UPDATED.
 ```
 
 ---
 
 ## 8. Desactivar producto
-
-Endpoint administrativo temporal.
 
 ### Request
 
@@ -560,6 +654,8 @@ Ejemplo:
 ```http
 PATCH /api/admin/products/2/deactivate
 ```
+
+`{id}` debe ser `producto.id_producto`.
 
 ### Body
 
@@ -583,15 +679,7 @@ No requiere body.
       "slug": "maquillaje"
     }
   ],
-  "imagenes": [
-    {
-      "id": 1,
-      "url": "https://res.cloudinary.com/demo/image/upload/sample.jpg",
-      "orden": 0,
-      "principal": true,
-      "altText": "Labial negro mate"
-    }
-  ]
+  "imagenes": []
 }
 ```
 
@@ -599,16 +687,14 @@ Efectos esperados:
 
 ```text
 - producto.activo pasa a false.
-- El producto deja de aparecer en GET /api/products.
-- GET /api/products/{slug} debe devolver 404 mientras esté inactivo.
+- El producto no aparece en GET /api/products.
+- GET /api/products/{slug} devuelve 404 mientras esté inactivo.
 - Registra auditoría DEACTIVATED.
 ```
 
 ---
 
 ## 9. Reactivar producto
-
-Endpoint administrativo temporal.
 
 ### Request
 
@@ -621,6 +707,8 @@ Ejemplo:
 ```http
 PATCH /api/admin/products/2/activate
 ```
+
+`{id}` debe ser `producto.id_producto`.
 
 ### Body
 
@@ -644,15 +732,7 @@ No requiere body.
       "slug": "maquillaje"
     }
   ],
-  "imagenes": [
-    {
-      "id": 1,
-      "url": "https://res.cloudinary.com/demo/image/upload/sample.jpg",
-      "orden": 0,
-      "principal": true,
-      "altText": "Labial negro mate"
-    }
-  ]
+  "imagenes": []
 }
 ```
 
@@ -666,11 +746,172 @@ Efectos esperados:
 
 ---
 
-# Pruebas SQL recomendadas
+## 10. Agregar imagen por URL
 
-Estas pruebas se pueden ejecutar desde DBeaver o psql.
+Endpoint administrativo temporal.
+
+### Request
+
+```http
+POST /api/admin/products/{id}/images
+Content-Type: application/json
+```
+
+Ejemplo:
+
+```http
+POST /api/admin/products/2/images
+```
+
+`{id}` debe ser `producto.id_producto`.
+
+### Body
+
+```json
+{
+  "url": "https://res.cloudinary.com/demo/image/upload/sample.jpg",
+  "publicId": "demo/labial-negro-mate",
+  "orden": 0,
+  "principal": true,
+  "altText": "Labial negro mate"
+}
+```
+
+Notas:
+
+```text
+url:
+- URL pública de la imagen.
+
+publicId:
+- Identificador externo de la imagen.
+- Por ahora puede ser cualquier texto.
+- Cuando se integre Cloudinary real, será el public_id devuelto por Cloudinary.
+
+orden:
+- Posición en el carrusel.
+- 0 significa primera imagen.
+- Si no se envía, el backend puede asignar el siguiente orden disponible.
+
+principal:
+- true si debe ser la imagen principal del producto.
+- Si es la primera imagen del producto, el backend puede marcarla como principal automáticamente.
+
+altText:
+- Texto alternativo para accesibilidad y SEO.
+```
+
+### Respuesta esperada
+
+```json
+{
+  "id": 5,
+  "url": "https://res.cloudinary.com/demo/image/upload/sample.jpg",
+  "orden": 0,
+  "principal": true,
+  "altText": "Labial negro mate"
+}
+```
+
+Efectos esperados:
+
+```text
+- Inserta en imagen_producto.
+- Si principal = true, las demás imágenes del mismo producto quedan con principal = false.
+- Registra auditoría IMAGE_ADDED.
+```
 
 ---
+
+## 11. Marcar imagen como principal
+
+### Request
+
+```http
+PATCH /api/admin/products/{id}/images/{imageId}/main
+```
+
+Ejemplo:
+
+```http
+PATCH /api/admin/products/2/images/5/main
+```
+
+Dónde:
+
+```text
+{id}      = producto.id_producto
+{imageId} = imagen_producto.id_imagen
+```
+
+### Body
+
+No requiere body.
+
+### Respuesta esperada
+
+```json
+{
+  "id": 5,
+  "url": "https://res.cloudinary.com/demo/image/upload/sample.jpg",
+  "orden": 0,
+  "principal": true,
+  "altText": "Labial negro mate"
+}
+```
+
+Efectos esperados:
+
+```text
+- La imagen indicada queda como principal.
+- Las demás imágenes del mismo producto quedan principal = false.
+- Registra auditoría MAIN_IMAGE_CHANGED.
+```
+
+---
+
+## 12. Eliminar imagen
+
+### Request
+
+```http
+DELETE /api/admin/products/{id}/images/{imageId}
+```
+
+Ejemplo:
+
+```http
+DELETE /api/admin/products/2/images/5
+```
+
+Dónde:
+
+```text
+{id}      = producto.id_producto
+{imageId} = imagen_producto.id_imagen
+```
+
+### Body
+
+No requiere body.
+
+### Respuesta esperada
+
+```http
+204 No Content
+```
+
+Efectos esperados:
+
+```text
+- Elimina la imagen de imagen_producto.
+- Si era la imagen principal y quedan otras imágenes, el backend puede marcar otra como principal.
+- Registra auditoría IMAGE_DELETED.
+```
+
+---
+
+# Pruebas SQL recomendadas
 
 ## 1. Verificar tablas creadas por Flyway
 
@@ -681,9 +922,7 @@ WHERE table_schema = 'public'
 ORDER BY table_name;
 ```
 
-### Resultado esperado
-
-Debe incluir:
+Resultado esperado:
 
 ```text
 categoria
@@ -705,20 +944,17 @@ FROM flyway_schema_history
 ORDER BY installed_rank;
 ```
 
-### Resultado esperado
-
-Debe existir al menos la migración inicial:
+Resultado esperado:
 
 ```text
-V1__init_schema.sql
-success = true
+Debe existir V1__init_schema.sql con success = true.
 ```
 
 ---
 
 ## 3. Insertar datos base para pruebas
 
-### Insertar admin temporal
+### Admin temporal
 
 ```sql
 INSERT INTO usuario_admin (email, nombre, pass_hash)
@@ -726,7 +962,7 @@ VALUES ('admin@gabriela.com', 'Gabriela', 'placeholder_hash')
 ON CONFLICT (email) DO NOTHING;
 ```
 
-### Insertar categorías
+### Categorías
 
 ```sql
 INSERT INTO categoria (nombre, slug)
@@ -748,15 +984,16 @@ FROM categoria
 ORDER BY id_categoria;
 ```
 
-### Resultado esperado
+Resultado esperado:
 
 ```text
-Debe mostrar las categorías insertadas con sus IDs.
+Debe mostrar las categorías con sus IDs.
+Usa esos IDs en categoriaIds.
 ```
 
 ---
 
-## 4. Verificar productos creados desde Postman
+## 4. Verificar productos
 
 ```sql
 SELECT
@@ -774,15 +1011,12 @@ FROM producto
 ORDER BY id_producto;
 ```
 
-### Resultado esperado
-
-Después de crear o editar productos desde Postman, deben aparecer registros como:
+Resultado esperado:
 
 ```text
-id_producto = 2
-nombre_producto = Labial negro mate
-slug = labial-negro-mate
-activo = true
+Debe mostrar los productos creados o editados desde Postman.
+Usa id_producto para endpoints administrativos.
+Usa slug para endpoints públicos de detalle.
 ```
 
 ---
@@ -802,43 +1036,15 @@ JOIN categoria c ON c.id_categoria = pc.id_categoria
 ORDER BY p.id_producto, c.id_categoria;
 ```
 
-### Resultado esperado
-
-Debe mostrar qué categorías tiene cada producto.
-
-Ejemplo:
+Resultado esperado:
 
 ```text
-Labial negro mate | Maquillaje
-Labial negro mate | Labios
+Debe mostrar las categorías asociadas a cada producto.
 ```
 
 ---
 
-## 6. Insertar imagen manual de prueba
-
-Mientras no exista subida real a Cloudinary, se puede insertar una URL manualmente:
-
-```sql
-INSERT INTO imagen_producto (
-    id_producto,
-    public_id,
-    url,
-    orden,
-    principal,
-    alt_text
-)
-VALUES (
-    2,
-    'demo/labial-negro-mate',
-    'https://res.cloudinary.com/demo/image/upload/sample.jpg',
-    0,
-    true,
-    'Labial negro mate'
-);
-```
-
-### Verificar imágenes
+## 6. Verificar imágenes
 
 ```sql
 SELECT
@@ -848,50 +1054,49 @@ SELECT
     url,
     orden,
     principal,
-    alt_text
+    alt_text,
+    fecha_creacion
 FROM imagen_producto
 ORDER BY id_producto, orden;
 ```
 
-### Resultado esperado
+Resultado esperado:
 
-Debe aparecer la imagen asociada al producto.
-
-Luego:
-
-```http
-GET /api/products
-```
-
-debe incluir:
-
-```
-"imagenPrincipalUrl": "https://res.cloudinary.com/demo/image/upload/sample.jpg"
-```
-
-Y:
-
-```http
-GET /api/products/labial-negro-mate
-```
-
-debe incluir la lista:
-
-```
-"imagenes": [
-  {
-    "id": 1,
-    "url": "https://res.cloudinary.com/demo/image/upload/sample.jpg",
-    "orden": 0,
-    "principal": true,
-    "altText": "Labial negro mate"
-  }
-]
+```text
+Debe mostrar las imágenes agregadas desde Postman.
+id_imagen se usa como {imageId}.
+id_producto se usa como {id}.
+Solo una imagen por producto debería tener principal = true.
 ```
 
 ---
 
-## 7. Verificar auditoría
+## 7. Verificar imagen principal de un producto
+
+```sql
+SELECT
+    p.id_producto,
+    p.nombre_producto,
+    i.id_imagen,
+    i.url,
+    i.principal
+FROM producto p
+JOIN imagen_producto i ON i.id_producto = p.id_producto
+WHERE p.id_producto = 2
+  AND i.principal = true;
+```
+
+Cambia `2` por el `id_producto` real.
+
+Resultado esperado:
+
+```text
+Debe devolver máximo una imagen principal para ese producto.
+```
+
+---
+
+## 8. Verificar auditoría
 
 ```sql
 SELECT
@@ -909,22 +1114,23 @@ JOIN usuario_admin ua ON ua.id_usuario = pal.id_usuario
 ORDER BY pal.fecha_evento DESC;
 ```
 
-### Resultado esperado
-
-Debe mostrar acciones como:
+Resultado esperado:
 
 ```text
+Debe mostrar acciones como:
+
 CREATED
 UPDATED
 DEACTIVATED
 REACTIVATED
+IMAGE_ADDED
+IMAGE_DELETED
+MAIN_IMAGE_CHANGED
 ```
 
 ---
 
-## 8. Verificar que productos desactivados no aparecen públicamente
-
-### SQL
+## 9. Verificar productos desactivados
 
 ```sql
 SELECT id_producto, nombre_producto, slug, activo
@@ -933,36 +1139,12 @@ WHERE activo = false
 ORDER BY id_producto;
 ```
 
-### Resultado esperado
-
-Debe listar productos desactivados.
-
-### Postman
-
-```http
-GET /api/products
-```
-
 Resultado esperado:
 
 ```text
-Los productos con activo = false no deben aparecer.
-```
-
-```http
-GET /api/products/{slug}
-```
-
-Si el producto está inactivo, debe responder:
-
-```json
-{
-  "timestamp": "2026-05-13T...",
-  "status": 404,
-  "error": "Not Found",
-  "message": "Producto no encontrado: labial-negro-mate",
-  "path": "/api/products/labial-negro-mate"
-}
+Debe listar productos inactivos.
+Esos productos no deben aparecer en GET /api/products.
+GET /api/products/{slug} debe responder 404.
 ```
 
 ---
@@ -987,19 +1169,22 @@ Implementado:
 [OK] Crear productos
 [OK] Editar productos
 [OK] Activar/desactivar productos
-[OK] Auditoría básica de productos
+[OK] Agregar imágenes por URL
+[OK] Eliminar imágenes
+[OK] Marcar imagen principal
+[OK] Auditoría básica de productos e imágenes
 ```
 
 Pendiente:
 
 ```text
-[ ] Endpoint admin para agregar imágenes
-[ ] Endpoint admin para eliminar imágenes
-[ ] Endpoint admin para marcar imagen principal
+[ ] Crear cuenta de Cloudinary
 [ ] Integración real con Cloudinary
+[ ] Endpoint multipart/form-data para subir archivos
 [ ] Login admin
 [ ] JWT
 [ ] Protección real de /api/admin/**
+[ ] CORS definitivo para frontend
 [ ] Tests automatizados
 [ ] Deploy
 ```
