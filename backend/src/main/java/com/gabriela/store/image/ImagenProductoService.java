@@ -13,6 +13,7 @@ import com.gabriela.store.user.UsuarioAdmin;
 import com.gabriela.store.user.UsuarioAdminRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class ImagenProductoService {
@@ -24,17 +25,20 @@ public class ImagenProductoService {
     private final ProductoRepository productoRepository;
     private final UsuarioAdminRepository usuarioAdminRepository;
     private final ProductoAuditLogRepository productoAuditLogRepository;
+    private final CloudinaryStorageService cloudinaryStorageService;
 
     public ImagenProductoService(
             ImagenProductoRepository imagenProductoRepository,
             ProductoRepository productoRepository,
             UsuarioAdminRepository usuarioAdminRepository,
-            ProductoAuditLogRepository productoAuditLogRepository
+            ProductoAuditLogRepository productoAuditLogRepository,
+            CloudinaryStorageService cloudinaryStorageService
     ) {
         this.imagenProductoRepository = imagenProductoRepository;
         this.productoRepository = productoRepository;
         this.usuarioAdminRepository = usuarioAdminRepository;
         this.productoAuditLogRepository = productoAuditLogRepository;
+        this.cloudinaryStorageService = cloudinaryStorageService;
     }
 
 
@@ -50,9 +54,7 @@ public class ImagenProductoService {
 
 
         // Si el cliente no especifica un orden, asignamos el siguiente orden disponible para este producto.
-        int orden = request.orden() != null
-                ? request.orden()
-                : nextImageOrder(idProducto);
+        int orden = resolveImageOrder(idProducto, request.orden());
 
         boolean shouldBePrincipal = Boolean.TRUE.equals(request.principal())
                 || imagenProductoRepository.countByProducto_IdProducto(idProducto) == 0;
@@ -209,5 +211,77 @@ public class ImagenProductoService {
                 imagen.isPrincipal(),
                 imagen.getAltText()
         );
+    }
+
+
+    // Este metodo permite subir una imagen a Cloudinary y asociarla a un producto,Recibe el ID del producto,
+    // el archivo de imagen, el orden deseado, si debe ser la imagen principal y el texto alternativo,
+    // maneja la lógica para subir la imagen a Cloudinary, guardar la información en la base de datos,
+    // y registrar la acción en el log de auditoría del producto.
+    @Transactional
+    public ImageResponse uploadImage(
+            Long idProducto,
+            MultipartFile file,
+            Integer orden,
+            Boolean principal,
+            String altText
+    ) {
+        Producto producto = productoRepository.findById(idProducto)
+                .orElseThrow(() -> new NotFoundException("Producto no encontrado con id: " + idProducto));
+
+        UsuarioAdmin admin = getCurrentTemporaryAdmin();
+
+        int finalOrden = resolveImageOrder(idProducto, orden);
+
+        boolean shouldBePrincipal = Boolean.TRUE.equals(principal)
+                || imagenProductoRepository.countByProducto_IdProducto(idProducto) == 0;
+
+        if (shouldBePrincipal) {
+            imagenProductoRepository.clearPrincipalByProductoId(idProducto);
+            imagenProductoRepository.flush();
+        }
+
+        CloudinaryUploadResult uploadResult =
+                cloudinaryStorageService.uploadProductImage(idProducto, file);
+
+        ImagenProducto imagen = new ImagenProducto(
+                producto,
+                uploadResult.publicId(),
+                uploadResult.secureUrl(),
+                finalOrden,
+                shouldBePrincipal,
+                normalizeNullableText(altText)
+        );
+
+        ImagenProducto savedImage = imagenProductoRepository.save(imagen);
+
+        productoAuditLogRepository.save(new ProductoAuditLog(
+                producto,
+                admin,
+                AuditAction.IMAGE_ADDED,
+                "Imagen subida a Cloudinary desde API admin."
+        ));
+
+        return toResponse(savedImage);
+    }
+
+
+    // validacion para resolver el orden de una nueva imagen, asegurando que no sea negativo y que no exista otra imagen con el mismo orden para el producto especificado.
+    private int resolveImageOrder(Long idProducto, Integer requestedOrder) {
+        int resolvedOrder = requestedOrder != null
+                ? requestedOrder
+                : nextImageOrder(idProducto);
+
+        if (resolvedOrder < 0) {
+            throw new BadRequestException("El orden de la imagen no puede ser negativo.");
+        }
+
+        if (imagenProductoRepository.existsByProducto_IdProductoAndOrden(idProducto, resolvedOrder)) {
+            throw new BadRequestException(
+                    "Ya existe una imagen con orden " + resolvedOrder + " para el producto " + idProducto + "."
+            );
+        }
+
+        return resolvedOrder;
     }
 }

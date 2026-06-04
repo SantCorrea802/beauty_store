@@ -36,4 +36,7 @@ public interface ImagenProductoRepository extends JpaRepository<ImagenProducto, 
              AND i.principal = true
            """)
     int clearPrincipalByProductoId(@Param("idProducto") Long idProducto);
+
+
+    boolean existsByProducto_IdProductoAndOrden(Long idProducto, Integer orden);
 }

@@ -13,6 +13,7 @@ import com.gabriela.store.product.dto.ProductUpdateRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/admin/products")
@@ -98,6 +99,27 @@ public class ProductoAdminController {
             @PathVariable Long imageId
     ) {
         return imagenProductoService.markAsMain(id, imageId);
+    }
+
+
+
+    // Aqui se implementa un endpoint para subir una imagen a un producto utilizando
+    // multipart/form-data, lo que permite enviar archivos binarios (como imágenes) junto con
+    // otros datos en la misma solicitud HTTP. El metodo recibe el ID del producto, el archivo de
+    // imagen, y opcionalmente el orden, si es principal o no, y el texto alternativo (altText)
+    // para la imagen. Luego delega la lógica de negocio al servicio de imágenes, que se encarga de
+    // validar el archivo, subirlo a Cloudinary, guardar la información en la base de datos y
+    // registrar la acción en el log de auditoría de productos.
+    @PostMapping(value = "/{id}/images/upload", consumes = "multipart/form-data")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ImageResponse uploadImage(
+            @PathVariable Long id,
+            @RequestPart("file") MultipartFile file,
+            @RequestParam(required = false) Integer orden,
+            @RequestParam(required = false) Boolean principal,
+            @RequestParam(required = false) String altText
+    ) {
+        return imagenProductoService.uploadImage(id, file, orden, principal, altText);
     }
 
 }
