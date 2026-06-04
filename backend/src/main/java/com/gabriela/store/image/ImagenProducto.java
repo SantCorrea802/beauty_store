@@ -41,7 +41,7 @@ public class ImagenProducto {
     @Column(name="fecha_creacion", nullable = false)
     private OffsetDateTime fechaCreacion;
 
-    public ImagenProducto(Producto producto, String publicId, String url, Integer orden, boolean principal, String altText) {
+    public ImagenProducto(Producto producto, String publicId, String url, int orden, boolean principal, String altText) {
         this.producto = producto;
         this.publicId = publicId;
         this.url = url;
@@ -52,6 +52,17 @@ public class ImagenProducto {
 
     @PrePersist
     void prePersist() {
-        this.fechaCreacion = OffsetDateTime.now();
+        if (this.fechaCreacion == null) {
+            this.fechaCreacion = OffsetDateTime.now();
+        }
     }
+
+    public void marcarComoPrincipal() {
+        this.principal = true;
+    }
+
+    public void quitarComoPrincipal() {
+        this.principal = false;
+    }
+
 }
