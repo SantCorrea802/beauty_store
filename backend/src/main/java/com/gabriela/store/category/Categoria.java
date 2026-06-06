@@ -33,4 +33,9 @@ public class Categoria {
         this.nombre = nombre;
         this.slug = slug;
     }
+
+    public void actualizarDatos(String nombre, String slug) {
+        this.nombre = nombre;
+        this.slug = slug;
+    }
 }
