@@ -1,7 +1,7 @@
 # Backend - Tienda Gabriela
 
 Backend REST para una tienda de productos de belleza, maquillaje, cuidado capilar e higiene personal.
-
+ 
 Este backend cubre catálogo público, administración de productos, categorías, usuarios administradores, imágenes con Cloudinary, autenticación de administradores con JWT y auditoría básica de acciones administrativas.
 
 ---
