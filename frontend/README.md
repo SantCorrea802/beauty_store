@@ -1,73 +1,560 @@
-# React + TypeScript + Vite
+# Frontend - Tienda Gabriela
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend web para la tienda Gabriela. Está construido con **Vite + React + TypeScript** y consume el backend REST desplegado en Render.
 
-Currently, two official plugins are available:
+Este frontend todavía está en fase inicial. Por ahora implementa el catálogo público mínimo:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```text
+[OK] Proyecto Vite + React + TypeScript
+[OK] React Router configurado
+[OK] Variable de entorno VITE_API_BASE_URL
+[OK] Cliente HTTP base con fetch
+[OK] Manejo básico de errores de API
+[OK] Tipos TypeScript para productos, categorías e imágenes
+[OK] API de productos públicos
+[OK] Página pública de catálogo
+[OK] Página pública de detalle de producto por slug
+[OK] Estilos globales base en index.css
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Pendiente:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```text
+[ ] Listar categorías en frontend
+[ ] Filtrar productos por categoría
+[ ] Login admin
+[ ] Persistencia de JWT en frontend
+[ ] Rutas admin protegidas
+[ ] Panel admin de productos
+[ ] Panel admin de categorías
+[ ] Panel admin de usuarios
+[ ] Gestión de imágenes desde panel
+[ ] Diseño visual final
+[ ] Deploy en Vercel
 ```
+
+---
+
+## Stack técnico
+
+```text
+Vite
+React
+TypeScript
+React Router DOM
+Fetch API
+CSS global básico
+```
+
+No se está usando todavía:
+
+```text
+Redux
+Zustand
+Tailwind
+React Query
+Axios
+UI library
+```
+
+Eso es intencional. Para esta etapa inicial, el objetivo es validar conexión real con el backend antes de agregar más dependencias.
+
+---
+
+## Arquitectura actual
+
+Flujo general:
+
+```text
+Navegador
+  ↓
+React Router
+  ↓
+Página pública
+  ↓
+API client en src/api
+  ↓
+Backend Render
+  ↓
+Supabase PostgreSQL / Cloudinary
+```
+
+Estructura relevante:
+
+```text
+frontend/
+  src/
+    api/
+      http.ts
+      productsApi.ts
+    pages/
+      public/
+        HomePage.tsx
+        ProductDetailPage.tsx
+    types/
+      product.ts
+    App.tsx
+    main.tsx
+    index.css
+  .env
+  .env.example
+  package.json
+```
+
+Responsabilidades:
+
+```text
+src/api/http.ts
+- Define funciones genéricas GET, POST, PUT, PATCH y DELETE.
+- Lee VITE_API_BASE_URL.
+- Agrega headers comunes.
+- Convierte errores HTTP en ApiError.
+
+src/api/productsApi.ts
+- Consume endpoints públicos de productos.
+- Implementa getProducts() y getProductBySlug().
+
+src/types/product.ts
+- Define tipos TypeScript para ProductSummary, ProductDetail, Category y ProductImage.
+
+src/pages/public/HomePage.tsx
+- Carga productos activos desde GET /api/products.
+- Muestra nombre, marca, precio, imagen principal y link al detalle.
+
+src/pages/public/ProductDetailPage.tsx
+- Lee el slug desde la URL.
+- Consulta GET /api/products/{slug}.
+- Muestra detalle, categorías e imágenes del producto.
+
+src/App.tsx
+- Define rutas públicas.
+
+src/main.tsx
+- Monta React en el DOM.
+- Configura BrowserRouter.
+
+src/index.css
+- Define estilos globales mínimos.
+```
+
+---
+
+## Variables de entorno
+
+Crear este archivo en la raíz del frontend:
+
+```text
+frontend/.env
+```
+
+Contenido:
+
+```env
+VITE_API_BASE_URL=https://gabriela-store-backend.onrender.com
+```
+
+También existe o debe existir:
+
+```text
+frontend/.env.example
+```
+
+con el mismo nombre de variable, pero sin secretos:
+
+```env
+VITE_API_BASE_URL=https://gabriela-store-backend.onrender.com
+```
+
+Notas importantes:
+
+```text
+- Las variables expuestas al frontend deben empezar por VITE_.
+- VITE_API_BASE_URL no es secreta; es la URL pública del backend.
+- Nunca poner JWT_SECRET, CLOUDINARY_API_SECRET, DB_PASSWORD ni secretos en el frontend.
+- Si cambias .env, reinicia npm run dev.
+```
+
+---
+
+## Instalación local
+
+Desde la raíz del repositorio:
+
+```bash
+cd frontend
+npm install
+```
+
+Luego ejecutar:
+
+```bash
+npm run dev
+```
+
+Vite debería mostrar algo como:
+
+```text
+Local: http://localhost:5173/
+```
+
+Abrir en el navegador:
+
+```text
+http://localhost:5173
+```
+
+---
+
+## Requisitos para que se vean datos
+
+El frontend consume el backend desplegado:
+
+```text
+https://gabriela-store-backend.onrender.com
+```
+
+El backend debe estar funcionando y debe permitir CORS para:
+
+```text
+http://localhost:5173
+```
+
+En Render, la variable del backend debe incluir:
+
+```env
+CORS_ALLOWED_ORIGINS=http://localhost:5173
+```
+
+Si el backend está en Render Free, puede dormirse por inactividad. En ese caso, la primera carga puede tardar varios segundos.
+
+---
+
+## Endpoints consumidos actualmente
+
+### Listar productos activos
+
+```http
+GET /api/products
+```
+
+URL completa usada por el frontend:
+
+```text
+https://gabriela-store-backend.onrender.com/api/products
+```
+
+Respuesta esperada:
+
+```json
+[
+  {
+    "id": 1,
+    "nombre": "Labial negro mate",
+    "precio": 9500.00,
+    "descripcion": "Lapiz labial negro con acabado mate.",
+    "slug": "labial-negro-mate",
+    "activo": true,
+    "marca": "Marca labis",
+    "imagenPrincipalUrl": "https://res.cloudinary.com/..."
+  }
+]
+```
+
+Si no hay productos activos, la respuesta puede ser:
+
+```json
+[]
+```
+
+En ese caso el frontend muestra:
+
+```text
+No hay productos disponibles.
+```
+
+---
+
+### Consultar detalle de producto
+
+```http
+GET /api/products/{slug}
+```
+
+Ejemplo:
+
+```text
+https://gabriela-store-backend.onrender.com/api/products/labial-negro-mate
+```
+
+Respuesta esperada:
+
+```json
+{
+  "id": 1,
+  "nombre": "Labial negro mate",
+  "precio": 9500.00,
+  "descripcion": "Lapiz labial negro con acabado mate.",
+  "slug": "labial-negro-mate",
+  "activo": true,
+  "marca": "Marca labis",
+  "categorias": [
+    {
+      "id": 1,
+      "nombre": "Maquillaje",
+      "slug": "maquillaje"
+    }
+  ],
+  "imagenes": [
+    {
+      "id": 10,
+      "url": "https://res.cloudinary.com/...",
+      "orden": 0,
+      "principal": true,
+      "altText": "Labial negro mate"
+    }
+  ]
+}
+```
+
+Ruta del frontend:
+
+```text
+/products/{slug}
+```
+
+Ejemplo:
+
+```text
+http://localhost:5173/products/labial-negro-mate
+```
+
+---
+
+## Paso a paso para probar lo implementado
+
+### 1. Verificar que el backend responde
+
+En navegador o Postman:
+
+```http
+GET https://gabriela-store-backend.onrender.com/api/products
+```
+
+Resultado esperado:
+
+```text
+200 OK
+```
+
+Puede devolver una lista de productos o una lista vacía.
+
+---
+
+### 2. Verificar `.env` del frontend
+
+Archivo:
+
+```text
+frontend/.env
+```
+
+Debe tener:
+
+```env
+VITE_API_BASE_URL=https://gabriela-store-backend.onrender.com
+```
+
+Si lo creaste o modificaste, reinicia Vite.
+
+---
+
+### 3. Levantar frontend
+
+Desde terminal:
+
+```bash
+cd frontend
+npm run dev
+```
+
+Abrir:
+
+```text
+http://localhost:5173
+```
+
+---
+
+### 4. Probar catálogo
+
+En la página principal debe pasar uno de estos casos:
+
+```text
+Caso A:
+Se muestran productos activos con nombre, precio, marca, imagen principal y link de detalle.
+
+Caso B:
+Si no hay productos activos, se muestra: No hay productos disponibles.
+
+Caso C:
+Si el backend falla, se muestra un mensaje de error.
+```
+
+---
+
+### 5. Probar detalle de producto
+
+Si un producto aparece en el catálogo, hacer clic en:
+
+```text
+Ver detalle
+```
+
+Debe navegar a:
+
+```text
+/products/{slug}
+```
+
+Y mostrar:
+
+```text
+- Nombre del producto
+- Marca, si existe
+- Precio
+- Descripción, si existe
+- Categorías
+- Imágenes
+```
+
+---
+
+## Errores comunes
+
+### Error: `Failed to resolve import "./index.css"`
+
+Causa:
+
+```text
+src/main.tsx importa ./index.css, pero src/index.css no existe.
+```
+
+Solución:
+
+```text
+Crear frontend/src/index.css
+```
+
+---
+
+### Error: `VITE_API_BASE_URL no está definida`
+
+Causa:
+
+```text
+No existe frontend/.env o la variable está mal escrita.
+```
+
+Solución:
+
+```env
+VITE_API_BASE_URL=https://gabriela-store-backend.onrender.com
+```
+
+Luego reiniciar:
+
+```bash
+npm run dev
+```
+
+---
+
+### Error CORS en navegador
+
+Causa posible:
+
+```text
+El backend no permite http://localhost:5173 en CORS_ALLOWED_ORIGINS.
+```
+
+Solución en Render backend:
+
+```env
+CORS_ALLOWED_ORIGINS=http://localhost:5173
+```
+
+Si luego el frontend está en Vercel:
+
+```env
+CORS_ALLOWED_ORIGINS=http://localhost:5173,https://tu-frontend.vercel.app
+```
+
+---
+
+### La primera carga tarda mucho
+
+Causa:
+
+```text
+Render Free duerme el servicio después de inactividad.
+```
+
+Solución temporal:
+
+```text
+Esperar a que despierte.
+```
+
+Solución real para producción:
+
+```text
+Usar una instancia paga que no duerma.
+```
+
+---
+
+## Scripts disponibles
+
+```bash
+npm run dev
+```
+
+Levanta Vite en desarrollo.
+
+```bash
+npm run build
+```
+
+Compila el frontend para producción.
+
+```bash
+npm run preview
+```
+
+Sirve localmente el build generado.
+
+---
+
+## Estado actual
+
+Implementado:
+
+```text
+[OK] Catálogo público básico.
+[OK] Detalle público de producto.
+[OK] Consumo del backend desplegado.
+[OK] Tipado inicial de datos.
+[OK] Manejo básico de loading/error.
+```
+
+Siguiente etapa recomendada:
+
+```text
+1. Consumir GET /api/categories.
+2. Agregar filtro por categoría en catálogo.
+3. Implementar login admin.
+4. Guardar JWT.
+5. Crear layout admin protegido.
+6. Construir panel admin por módulos.
+```
+
