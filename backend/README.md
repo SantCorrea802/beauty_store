@@ -2,7 +2,7 @@
 
 Backend REST para una tienda de productos de belleza, maquillaje, cuidado capilar e higiene personal.
 
-Este backend cubre catálogo público, administración de productos, imágenes con Cloudinary, autenticación de administradores con JWT, gestión básica de usuarios administradores y auditoría de acciones administrativas.
+Este backend cubre catálogo público, administración de productos, categorías, usuarios administradores, imágenes con Cloudinary, autenticación de administradores con JWT y auditoría básica de acciones administrativas.
 
 ---
 
@@ -18,14 +18,15 @@ Implementado:
 [OK] DTOs de entrada y salida
 [OK] Manejo global de errores
 [OK] Listar categorías públicas
+[OK] Gestión admin de categorías
 [OK] Listar productos activos
 [OK] Filtrar productos por categoría
 [OK] Consultar detalle de producto por slug
 [OK] Imagen principal en listado público
 [OK] Lista de imágenes en detalle de producto
-[OK] Crear productos desde API admin
-[OK] Editar productos desde API admin
-[OK] Activar/desactivar productos desde API admin
+[OK] Crear productos
+[OK] Editar productos
+[OK] Activar/desactivar productos
 [OK] Agregar imágenes por URL
 [OK] Subir imágenes reales a Cloudinary usando multipart/form-data
 [OK] Eliminar imágenes de PostgreSQL y Cloudinary
@@ -38,19 +39,13 @@ Implementado:
 [OK] Gestión básica de usuarios admin desde API protegida
 ```
 
-Pendiente inmediato:
+Pendiente:
 
 ```text
-[ ] Gestión admin de categorías desde API/panel:
-    - GET /api/admin/categories
-    - POST /api/admin/categories
-    - PUT /api/admin/categories/{id}
-    - DELETE /api/admin/categories/{id}
-
 [ ] CORS definitivo para frontend
 [ ] Tests automatizados
 [ ] Configuración final de deploy
-[ ] Endurecimiento de seguridad para producción
+[ ] Endurecimiento adicional de seguridad para producción
 ```
 
 ---
@@ -92,7 +87,7 @@ JPA / Hibernate
 PostgreSQL
 ```
 
-Flujo de subida de imágenes:
+Para subida de imágenes:
 
 ```text
 Cliente / Postman
@@ -106,14 +101,12 @@ PostgreSQL
 Respuesta JSON
 ```
 
-Flujo de autenticación admin:
+Para endpoints admin protegidos:
 
 ```text
 POST /api/auth/login
         ↓
-Backend valida email + password BCrypt
-        ↓
-Backend emite JWT
+JWT
         ↓
 Authorization: Bearer <token>
         ↓
@@ -134,9 +127,10 @@ Service:
 - Valida productos, categorías, imágenes y usuario autenticado.
 - Genera slugs.
 - Crea, actualiza, activa y desactiva productos.
+- Administra categorías.
+- Administra usuarios administradores.
 - Administra imágenes.
 - Sube y elimina archivos en Cloudinary.
-- Administra usuarios admin.
 - Registra auditoría.
 
 Repository:
@@ -199,15 +193,14 @@ Reglas importantes de imágenes:
 - No puede repetirse el mismo orden para el mismo producto.
 ```
 
-Reglas importantes de usuarios admin:
+Reglas importantes de administradores:
 
 ```text
-- Los admins tienen email único.
-- La contraseña nunca se guarda en texto plano.
-- usuario_admin.pass_hash guarda un hash BCrypt.
-- El rol se maneja con enum AdminRole.
-- Actualmente existe AdminRole.ADMIN.
-- Los endpoints /api/admin/** requieren JWT con rol ADMIN.
+- Los administradores inician sesión mediante POST /api/auth/login.
+- Los endpoints /api/admin/** requieren JWT.
+- El rol actual implementado es ADMIN mediante enum AdminRole.
+- Las contraseñas se guardan como pass_hash con BCrypt.
+- Nunca se devuelve passHash en respuestas HTTP.
 ```
 
 ---
@@ -344,8 +337,8 @@ Debe ser secreto, largo y aleatorio. No debe estar en GitHub ni en el frontend.
 ## Endpoints públicos
 
 ```text
-GET  /api/categories/**
-GET  /api/products/**
+GET /api/categories/**
+GET /api/products/**
 POST /api/auth/login
 ```
 
@@ -377,7 +370,7 @@ Los administradores no deben guardar contraseñas en texto plano. La columna cor
 usuario_admin.pass_hash
 ```
 
-Para crear el primer admin o cambiar contraseñas manualmente en desarrollo, se usa una clase temporal local llamada `GeneratePasswordHash.java`.
+Para desarrollo se está usando una clase temporal llamada `GeneratePasswordHash.java` para generar hashes BCrypt.
 
 Ubicación sugerida:
 
@@ -412,25 +405,13 @@ Uso:
 
 Cada ejecución genera un hash diferente. Eso es normal porque BCrypt usa salt aleatorio.
 
-Después de implementar `POST /api/admin/users`, este archivo queda principalmente para:
-
-```text
-- crear el primer admin inicial;
-- reparar una contraseña localmente;
-- pruebas manuales controladas.
-```
-
-Los nuevos admins deben crearse normalmente desde:
-
-```http
-POST /api/admin/users
-```
+Después de implementar `POST /api/admin/users`, esta clase queda principalmente para bootstrap del primer admin o mantenimiento local excepcional.
 
 ---
 
-# Crear o actualizar el primer admin por SQL
+# Crear o actualizar el primer administrador por SQL
 
-El primer admin inicial se puede crear manualmente por SQL porque todavía no existe una cuenta autenticada que pueda crear otras.
+El primer administrador puede crearse manualmente por SQL porque todavía no existe un usuario autenticado que pueda crear otros usuarios.
 
 ## Crear admin inicial
 
@@ -479,7 +460,7 @@ Resultado esperado:
 
 ```text
 Debe mostrar administradores con rol ADMIN.
-pass_hash debe empezar normalmente por $2a$, $2b$ o $2y$ si se consulta explícitamente.
+pass_hash debe empezar normalmente por $2a$, $2b$ o $2y$.
 ```
 
 ---
@@ -501,20 +482,6 @@ id_producto -> para endpoints con {id}
 slug        -> para GET /api/products/{slug}
 ```
 
-Ejemplo:
-
-```text
-id_producto = 2
-slug = labial-negro-mate
-```
-
-Entonces usarías:
-
-```http
-PUT /api/admin/products/2
-GET /api/products/labial-negro-mate
-```
-
 ---
 
 ## Obtener IDs de categorías
@@ -528,27 +495,8 @@ ORDER BY id_categoria;
 Usa:
 
 ```text
-id_categoria -> para categoriaIds en POST/PUT de producto
+id_categoria -> para categoriaIds en POST/PUT de producto y endpoints admin de categoría
 slug         -> para filtrar productos por categoría
-```
-
-Ejemplo:
-
-```text
-id_categoria = 1
-slug = maquillaje
-```
-
-Entonces usarías:
-
-```json
-"categoriaIds": [1]
-```
-
-y:
-
-```http
-GET /api/products?category=maquillaje
 ```
 
 ---
@@ -569,31 +517,12 @@ id_producto -> para endpoints con {id}
 public_id   -> identificador de Cloudinary usado para eliminar assets
 ```
 
-Ejemplo:
-
-```text
-id_producto = 2
-id_imagen = 5
-```
-
-Entonces usarías:
-
-```http
-PATCH /api/admin/products/2/images/5/main
-DELETE /api/admin/products/2/images/5
-```
-
 ---
 
 ## Obtener IDs de usuarios admin
 
 ```sql
-SELECT
-    id_usuario,
-    email,
-    nombre,
-    rol,
-    activo
+SELECT id_usuario, email, nombre, rol, activo
 FROM usuario_admin
 ORDER BY id_usuario;
 ```
@@ -601,21 +530,7 @@ ORDER BY id_usuario;
 Usa:
 
 ```text
-id_usuario -> para endpoints con {id} en /api/admin/users/{id}
-email      -> para login
-```
-
-Ejemplo:
-
-```text
-id_usuario = 3
-email = empleado@gabriela.com
-```
-
-Entonces usarías:
-
-```http
-PATCH /api/admin/users/3/deactivate
+id_usuario -> para activar/desactivar usuarios admin
 ```
 
 ---
@@ -703,7 +618,138 @@ No requiere body.
 
 ---
 
-## 3. Listar productos activos
+## 3. Gestión admin de categorías
+
+Todos estos endpoints requieren Bearer Token.
+
+### 3.1. Listar categorías admin
+
+```http
+GET /api/admin/categories
+Authorization: Bearer <token>
+```
+
+Respuesta esperada:
+
+```json
+[
+  {
+    "id": 1,
+    "nombre": "Maquillaje",
+    "slug": "maquillaje"
+  },
+  {
+    "id": 2,
+    "nombre": "Cuidado facial",
+    "slug": "cuidado-facial"
+  }
+]
+```
+
+### 3.2. Crear categoría
+
+```http
+POST /api/admin/categories
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+Body:
+
+```json
+{
+  "nombre": "Cuidado facial"
+}
+```
+
+Respuesta esperada:
+
+```json
+{
+  "id": 7,
+  "nombre": "Cuidado facial",
+  "slug": "cuidado-facial"
+}
+```
+
+Efectos esperados:
+
+```text
+- Inserta una nueva categoría.
+- Genera slug automáticamente.
+- Rechaza nombres duplicados.
+```
+
+### 3.3. Editar categoría
+
+```http
+PUT /api/admin/categories/{id}
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+Ejemplo:
+
+```http
+PUT /api/admin/categories/7
+```
+
+Body:
+
+```json
+{
+  "nombre": "Cuidado de la piel"
+}
+```
+
+Respuesta esperada:
+
+```json
+{
+  "id": 7,
+  "nombre": "Cuidado de la piel",
+  "slug": "cuidado-de-la-piel"
+}
+```
+
+Efectos esperados:
+
+```text
+- Actualiza nombre.
+- Regenera slug.
+- Rechaza duplicados.
+```
+
+### 3.4. Eliminar categoría
+
+```http
+DELETE /api/admin/categories/{id}
+Authorization: Bearer <token>
+```
+
+Ejemplo:
+
+```http
+DELETE /api/admin/categories/7
+```
+
+Respuesta esperada:
+
+```http
+204 No Content
+```
+
+Efectos esperados:
+
+```text
+- Elimina la categoría.
+- Si existen relaciones en producto_categoria con ON DELETE CASCADE, se eliminan esas relaciones.
+- No elimina productos.
+```
+
+---
+
+## 4. Listar productos activos
 
 ### Request
 
@@ -742,7 +788,7 @@ Notas:
 
 ---
 
-## 4. Filtrar productos por categoría
+## 5. Filtrar productos por categoría
 
 ### Request
 
@@ -752,30 +798,9 @@ GET /api/products?category=maquillaje
 
 `category` debe ser el `slug` de la categoría, no el ID.
 
-### Body
-
-No requiere body.
-
-### Respuesta esperada
-
-```json
-[
-  {
-    "id": 2,
-    "nombre": "Labial negro mate",
-    "precio": 9500.00,
-    "descripcion": "Lapiz labial negro con acabado mate.",
-    "slug": "labial-negro-mate",
-    "activo": true,
-    "marca": "Marca labis",
-    "imagenPrincipalUrl": "https://res.cloudinary.com/..."
-  }
-]
-```
-
 ---
 
-## 5. Consultar detalle de producto por slug
+## 6. Consultar detalle de producto por slug
 
 ### Request
 
@@ -789,13 +814,7 @@ Ejemplo:
 GET /api/products/labial-negro-mate
 ```
 
-`{slug}` sale de la columna `producto.slug`.
-
-### Body
-
-No requiere body.
-
-### Respuesta esperada
+Respuesta esperada:
 
 ```json
 {
@@ -811,11 +830,6 @@ No requiere body.
       "id": 1,
       "nombre": "Maquillaje",
       "slug": "maquillaje"
-    },
-    {
-      "id": 4,
-      "nombre": "Labios",
-      "slug": "labios"
     }
   ],
   "imagenes": [
@@ -832,44 +846,15 @@ No requiere body.
 
 ---
 
-## 6. Consultar producto inexistente
-
-### Request
-
-```http
-GET /api/products/no-existe
-```
-
-### Respuesta esperada
-
-```json
-{
-  "timestamp": "2026-05-13T...",
-  "status": 404,
-  "error": "Not Found",
-  "message": "Producto no encontrado: no-existe",
-  "path": "/api/products/no-existe"
-}
-```
-
----
-
-# Endpoints admin de productos
-
-Todos requieren:
-
-```http
-Authorization: Bearer <token>
-```
-
----
-
 ## 7. Crear producto
+
+Endpoint protegido. Requiere Bearer Token.
 
 ### Request
 
 ```http
 POST /api/admin/products
+Authorization: Bearer <token>
 Content-Type: application/json
 ```
 
@@ -922,20 +907,17 @@ Efectos esperados:
 
 ## 8. Editar producto
 
+Endpoint protegido. Requiere Bearer Token.
+
 ### Request
 
 ```http
 PUT /api/admin/products/{id}
+Authorization: Bearer <token>
 Content-Type: application/json
 ```
 
-Ejemplo:
-
-```http
-PUT /api/admin/products/2
-```
-
-### Body
+Body:
 
 ```json
 {
@@ -947,71 +929,13 @@ PUT /api/admin/products/2
 }
 ```
 
-### Respuesta esperada
-
-```json
-{
-  "id": 2,
-  "nombre": "Labial negro mate",
-  "precio": 9500.00,
-  "descripcion": "Lapiz labial negro con acabado mate.",
-  "slug": "labial-negro-mate",
-  "activo": true,
-  "marca": "Marca labis",
-  "categorias": [
-    {
-      "id": 1,
-      "nombre": "Maquillaje",
-      "slug": "maquillaje"
-    }
-  ],
-  "imagenes": []
-}
-```
-
-Efectos esperados:
-
-```text
-- Actualiza datos del producto.
-- Reemplaza categorías anteriores.
-- Regenera slug si cambió el nombre.
-- Registra auditoría UPDATED con el admin autenticado.
-```
-
 ---
 
 ## 9. Desactivar producto
 
-### Request
-
 ```http
 PATCH /api/admin/products/{id}/deactivate
-```
-
-Ejemplo:
-
-```http
-PATCH /api/admin/products/2/deactivate
-```
-
-### Body
-
-No requiere body.
-
-### Respuesta esperada
-
-```json
-{
-  "id": 2,
-  "nombre": "Labial negro mate",
-  "precio": 9500.00,
-  "descripcion": "Lapiz labial negro con acabado mate.",
-  "slug": "labial-negro-mate",
-  "activo": false,
-  "marca": "Marca labis",
-  "categorias": [],
-  "imagenes": []
-}
+Authorization: Bearer <token>
 ```
 
 Efectos esperados:
@@ -1027,53 +951,8 @@ Efectos esperados:
 
 ## 10. Reactivar producto
 
-### Request
-
 ```http
 PATCH /api/admin/products/{id}/activate
-```
-
-Ejemplo:
-
-```http
-PATCH /api/admin/products/2/activate
-```
-
-### Body
-
-No requiere body.
-
-### Respuesta esperada
-
-```json
-{
-  "id": 2,
-  "nombre": "Labial negro mate",
-  "precio": 9500.00,
-  "descripcion": "Lapiz labial negro con acabado mate.",
-  "slug": "labial-negro-mate",
-  "activo": true,
-  "marca": "Marca labis",
-  "categorias": [],
-  "imagenes": []
-}
-```
-
-Efectos esperados:
-
-```text
-- producto.activo pasa a true.
-- El producto vuelve a aparecer en GET /api/products.
-- Registra auditoría REACTIVATED con el admin autenticado.
-```
-
----
-
-# Endpoints admin de imágenes
-
-Todos requieren:
-
-```http
 Authorization: Bearer <token>
 ```
 
@@ -1081,20 +960,17 @@ Authorization: Bearer <token>
 
 ## 11. Agregar imagen por URL
 
+Endpoint protegido. Requiere Bearer Token.
+
 ### Request
 
 ```http
 POST /api/admin/products/{id}/images
+Authorization: Bearer <token>
 Content-Type: application/json
 ```
 
-Ejemplo:
-
-```http
-POST /api/admin/products/2/images
-```
-
-### Body
+Body:
 
 ```json
 {
@@ -1106,67 +982,18 @@ POST /api/admin/products/2/images
 }
 ```
 
-Notas:
-
-```text
-url:
-- URL pública de la imagen.
-
-publicId:
-- Identificador externo de la imagen.
-- Si la imagen no pertenece a tu Cloudinary, puede ser un valor de referencia.
-- Para imágenes subidas por el backend, será el public_id devuelto por Cloudinary.
-
-orden:
-- Si principal=true, el backend debe forzar orden=0.
-- Si principal=false, debe ser >= 1.
-- Si se omite y la imagen es secundaria, el backend asigna el siguiente orden disponible.
-
-principal:
-- true si debe ser la imagen principal.
-- false u omitido si debe ser secundaria.
-- Si es la primera imagen del producto, el backend puede marcarla como principal automáticamente.
-
-altText:
-- Texto alternativo para accesibilidad y SEO.
-```
-
-### Respuesta esperada
-
-```json
-{
-  "id": 5,
-  "url": "https://res.cloudinary.com/demo/image/upload/sample.jpg",
-  "orden": 1,
-  "principal": false,
-  "altText": "Labial negro mate"
-}
-```
-
-Efectos esperados:
-
-```text
-- Inserta en imagen_producto.
-- Si principal=true, la nueva imagen queda con orden=0.
-- Las demás imágenes se reordenan como secundarias.
-- Registra auditoría IMAGE_ADDED con el admin autenticado.
-```
-
 ---
 
 ## 12. Subir imagen real a Cloudinary
+
+Endpoint protegido. Requiere Bearer Token.
 
 ### Request
 
 ```http
 POST /api/admin/products/{id}/images/upload
+Authorization: Bearer <token>
 Content-Type: multipart/form-data
-```
-
-Ejemplo:
-
-```http
-POST /api/admin/products/2/images/upload
 ```
 
 En Postman:
@@ -1197,87 +1024,13 @@ Recomendación:
 - Para imagen principal: principal=true y no enviar orden.
 ```
 
-### Respuesta esperada para secundaria
-
-```json
-{
-  "id": 10,
-  "url": "https://res.cloudinary.com/<cloud_name>/image/upload/...",
-  "orden": 2,
-  "principal": false,
-  "altText": "Vista secundaria del producto"
-}
-```
-
-### Respuesta esperada para principal
-
-```json
-{
-  "id": 11,
-  "url": "https://res.cloudinary.com/<cloud_name>/image/upload/...",
-  "orden": 0,
-  "principal": true,
-  "altText": "Imagen principal del producto"
-}
-```
-
-Efectos esperados:
-
-```text
-- Sube el archivo real a Cloudinary.
-- Guarda public_id y secure_url en imagen_producto.
-- Si principal=true, reordena imágenes para que la principal quede en orden=0.
-- Si principal=false, asigna orden secundario.
-- Registra auditoría IMAGE_ADDED con el admin autenticado.
-```
-
-Validaciones esperadas:
-
-```text
-- Archivo obligatorio.
-- Tamaño máximo: según spring.servlet.multipart.max-file-size.
-- Tipos permitidos: image/jpeg, image/png, image/webp.
-- Imagen secundaria no puede tener orden 0.
-- No se permite orden duplicado para el mismo producto.
-```
-
 ---
 
 ## 13. Marcar imagen como principal
 
-### Request
-
 ```http
 PATCH /api/admin/products/{id}/images/{imageId}/main
-```
-
-Ejemplo:
-
-```http
-PATCH /api/admin/products/2/images/5/main
-```
-
-Dónde:
-
-```text
-{id}      = producto.id_producto
-{imageId} = imagen_producto.id_imagen
-```
-
-### Body
-
-No requiere body.
-
-### Respuesta esperada
-
-```json
-{
-  "id": 5,
-  "url": "https://res.cloudinary.com/...",
-  "orden": 0,
-  "principal": true,
-  "altText": "Labial negro mate"
-}
+Authorization: Bearer <token>
 ```
 
 Efectos esperados:
@@ -1293,30 +1046,12 @@ Efectos esperados:
 
 ## 14. Eliminar imagen
 
-### Request
-
 ```http
 DELETE /api/admin/products/{id}/images/{imageId}
+Authorization: Bearer <token>
 ```
 
-Ejemplo:
-
-```http
-DELETE /api/admin/products/2/images/5
-```
-
-Dónde:
-
-```text
-{id}      = producto.id_producto
-{imageId} = imagen_producto.id_imagen
-```
-
-### Body
-
-No requiere body.
-
-### Respuesta esperada
+Respuesta esperada:
 
 ```http
 204 No Content
@@ -1333,43 +1068,18 @@ Efectos esperados:
 
 ---
 
-# Endpoints admin de usuarios
+## 15. Gestión admin de usuarios
 
-Todos requieren:
+Todos estos endpoints requieren Bearer Token.
 
-```http
-Authorization: Bearer <token>
-```
-
-Actualmente todos los usuarios creados desde API se crean con rol:
-
-```text
-ADMIN
-```
-
-El rol está modelado como enum:
-
-```java
-public enum AdminRole {
-    ADMIN
-}
-```
-
----
-
-## 15. Listar usuarios admin
-
-### Request
+### 15.1. Listar usuarios admin
 
 ```http
 GET /api/admin/users
+Authorization: Bearer <token>
 ```
 
-### Body
-
-No requiere body.
-
-### Respuesta esperada
+Respuesta esperada:
 
 ```json
 [
@@ -1379,24 +1089,21 @@ No requiere body.
     "nombre": "Gabriela",
     "rol": "ADMIN",
     "activo": true,
-    "fechaCreacion": "2026-06-04T00:00:00Z",
-    "fechaUltimaActualizacion": "2026-06-04T00:00:00Z"
+    "fechaCreacion": "2026-06-04T...",
+    "fechaUltimaActualizacion": "2026-06-04T..."
   }
 ]
 ```
 
----
-
-## 16. Crear usuario admin
-
-### Request
+### 15.2. Crear usuario admin
 
 ```http
 POST /api/admin/users
+Authorization: Bearer <token>
 Content-Type: application/json
 ```
 
-### Body
+Body:
 
 ```json
 {
@@ -1406,7 +1113,7 @@ Content-Type: application/json
 }
 ```
 
-### Respuesta esperada
+Respuesta esperada:
 
 ```json
 {
@@ -1415,133 +1122,52 @@ Content-Type: application/json
   "nombre": "Empleado Tienda",
   "rol": "ADMIN",
   "activo": true,
-  "fechaCreacion": "2026-06-04T00:00:00Z",
-  "fechaUltimaActualizacion": "2026-06-04T00:00:00Z"
+  "fechaCreacion": "2026-06-04T...",
+  "fechaUltimaActualizacion": "2026-06-04T..."
 }
 ```
 
-Efectos esperados:
-
-```text
-- Crea un nuevo usuario admin.
-- Normaliza email a minúsculas.
-- Guarda pass_hash con BCrypt.
-- No devuelve pass_hash en la respuesta.
-- El nuevo usuario puede iniciar sesión con POST /api/auth/login.
-```
-
----
-
-## 17. Desactivar usuario admin
-
-### Request
+Luego debe poder iniciar sesión:
 
 ```http
-PATCH /api/admin/users/{id}/deactivate
+POST /api/auth/login
 ```
 
-Ejemplo:
-
-```http
-PATCH /api/admin/users/3/deactivate
-```
-
-### Body
-
-No requiere body.
-
-### Respuesta esperada
+Body:
 
 ```json
 {
-  "id": 3,
   "email": "empleado@gabriela.com",
-  "nombre": "Empleado Tienda",
-  "rol": "ADMIN",
-  "activo": false,
-  "fechaCreacion": "2026-06-04T00:00:00Z",
-  "fechaUltimaActualizacion": "2026-06-04T01:00:00Z"
+  "password": "Empleado123"
 }
+```
+
+### 15.3. Desactivar usuario admin
+
+```http
+PATCH /api/admin/users/{id}/deactivate
+Authorization: Bearer <token>
 ```
 
 Efectos esperados:
 
 ```text
 - usuario_admin.activo pasa a false.
-- El usuario desactivado no debe poder hacer login.
+- Ese usuario ya no puede hacer login.
 ```
 
----
-
-## 18. Reactivar usuario admin
-
-### Request
+### 15.4. Reactivar usuario admin
 
 ```http
 PATCH /api/admin/users/{id}/activate
-```
-
-Ejemplo:
-
-```http
-PATCH /api/admin/users/3/activate
-```
-
-### Body
-
-No requiere body.
-
-### Respuesta esperada
-
-```json
-{
-  "id": 3,
-  "email": "empleado@gabriela.com",
-  "nombre": "Empleado Tienda",
-  "rol": "ADMIN",
-  "activo": true,
-  "fechaCreacion": "2026-06-04T00:00:00Z",
-  "fechaUltimaActualizacion": "2026-06-04T01:05:00Z"
-}
+Authorization: Bearer <token>
 ```
 
 Efectos esperados:
 
 ```text
 - usuario_admin.activo pasa a true.
-- El usuario vuelve a poder iniciar sesión.
-```
-
----
-
-# Endpoints admin de categorías
-
-Pendiente de implementación.
-
-Objetivo funcional:
-
-```text
-Permitir que el panel admin pueda crear, editar, listar y eliminar categorías sin usar SQL.
-```
-
-Endpoints previstos:
-
-```http
-GET    /api/admin/categories
-POST   /api/admin/categories
-PUT    /api/admin/categories/{id}
-DELETE /api/admin/categories/{id}
-```
-
-Criterios esperados:
-
-```text
-- Requiere Bearer Token.
-- El nombre de categoría es obligatorio.
-- El slug se genera automáticamente desde el nombre.
-- No se permiten nombres duplicados.
-- Eliminar una categoría no debe eliminar productos.
-- Si producto_categoria tiene ON DELETE CASCADE, al borrar categoría se eliminan solo sus relaciones.
+- Ese usuario puede volver a hacer login.
 ```
 
 ---
@@ -1587,21 +1213,7 @@ Debe existir V1__init_schema.sql con success = true.
 
 ---
 
-## 3. Insertar categorías de prueba
-
-```sql
-INSERT INTO categoria (nombre, slug)
-VALUES
-('Maquillaje', 'maquillaje'),
-('Cabello', 'cabello'),
-('Higiene personal', 'higiene-personal'),
-('Labios', 'labios'),
-('Perfumes', 'perfumes'),
-('Ofertas', 'ofertas')
-ON CONFLICT (slug) DO NOTHING;
-```
-
-Verificar:
+## 3. Verificar categorías
 
 ```sql
 SELECT id_categoria, nombre, slug
@@ -1629,14 +1241,6 @@ FROM producto
 ORDER BY id_producto;
 ```
 
-Resultado esperado:
-
-```text
-Debe mostrar los productos creados o editados desde Postman.
-Usa id_producto para endpoints administrativos.
-Usa slug para endpoints públicos de detalle.
-```
-
 ---
 
 ## 5. Verificar relación producto-categoría
@@ -1652,12 +1256,6 @@ FROM producto_categoria pc
 JOIN producto p ON p.id_producto = pc.id_producto
 JOIN categoria c ON c.id_categoria = pc.id_categoria
 ORDER BY p.id_producto, c.id_categoria;
-```
-
-Resultado esperado:
-
-```text
-Debe mostrar las categorías asociadas a cada producto.
 ```
 
 ---
@@ -1681,62 +1279,13 @@ ORDER BY id_producto, orden;
 Resultado esperado:
 
 ```text
-Debe mostrar las imágenes agregadas desde Postman.
-id_imagen se usa como {imageId}.
-id_producto se usa como {id}.
 Solo una imagen por producto debería tener principal = true.
 La imagen principal debería tener orden = 0.
 ```
 
 ---
 
-## 7. Verificar imagen principal de un producto
-
-```sql
-SELECT
-    p.id_producto,
-    p.nombre_producto,
-    i.id_imagen,
-    i.url,
-    i.orden,
-    i.principal
-FROM producto p
-JOIN imagen_producto i ON i.id_producto = p.id_producto
-WHERE p.id_producto = 2
-  AND i.principal = true;
-```
-
-Cambia `2` por el `id_producto` real.
-
-Resultado esperado:
-
-```text
-Debe devolver máximo una imagen principal para ese producto.
-Esa imagen debería tener orden = 0.
-```
-
----
-
-## 8. Verificar productos desactivados
-
-```sql
-SELECT id_producto, nombre_producto, slug, activo
-FROM producto
-WHERE activo = false
-ORDER BY id_producto;
-```
-
-Resultado esperado:
-
-```text
-Debe listar productos inactivos.
-Esos productos no deben aparecer en GET /api/products.
-GET /api/products/{slug} debe responder 404.
-```
-
----
-
-## 9. Verificar usuarios admin
+## 7. Verificar usuarios admin
 
 ```sql
 SELECT
@@ -1751,13 +1300,7 @@ FROM usuario_admin
 ORDER BY id_usuario;
 ```
 
-Resultado esperado:
-
-```text
-Debe listar los usuarios admin creados por SQL o por POST /api/admin/users.
-```
-
-Verificar que la contraseña no está en texto plano:
+Verificar hash:
 
 ```sql
 SELECT
@@ -1771,13 +1314,13 @@ ORDER BY id_usuario;
 Resultado esperado:
 
 ```text
-pass_hash debe iniciar por $2a$, $2b$ o $2y$.
-No debe contener la contraseña real.
+pass_hash debe ser un hash BCrypt.
+No debe guardar la contraseña en texto plano.
 ```
 
 ---
 
-## 10. Verificar auditoría
+## 8. Verificar auditoría
 
 ```sql
 SELECT
@@ -1811,32 +1354,9 @@ MAIN_IMAGE_CHANGED
 La columna ua.email debe corresponder al admin que hizo login.
 ```
 
-Prueba fuerte:
-
-```text
-1. Login con admin@gabriela.com.
-2. Ejecutar una acción admin.
-3. Verificar auditoría.
-4. Login con admin2@gabriela.com.
-5. Ejecutar otra acción admin.
-6. Verificar que la auditoría cambia de email según el token usado.
-```
-
 ---
 
 # Errores esperados
-
-## Producto no encontrado
-
-```json
-{
-  "timestamp": "2026-05-13T...",
-  "status": 404,
-  "error": "Not Found",
-  "message": "Producto no encontrado con id: 999",
-  "path": "/api/admin/products/999"
-}
-```
 
 ## Credenciales inválidas
 
@@ -1850,15 +1370,27 @@ Prueba fuerte:
 }
 ```
 
-## Email duplicado en usuario admin
+## Producto no encontrado
+
+```json
+{
+  "timestamp": "2026-05-13T...",
+  "status": 404,
+  "error": "Not Found",
+  "message": "Producto no encontrado con id: 999",
+  "path": "/api/admin/products/999"
+}
+```
+
+## Categoría duplicada
 
 ```json
 {
   "timestamp": "2026-05-13T...",
   "status": 400,
   "error": "Bad Request",
-  "message": "Ya existe un usuario admin con ese email.",
-  "path": "/api/admin/users"
+  "message": "Ya existe una categoría con ese nombre.",
+  "path": "/api/admin/categories"
 }
 ```
 
@@ -1911,7 +1443,7 @@ Prueba fuerte:
 - No poner CLOUDINARY_API_SECRET en frontend.
 - No dejar endpoints /api/admin/** abiertos.
 - No crear un endpoint público de registro de admins.
-- No devolver pass_hash en respuestas HTTP.
+- El primer admin se puede crear por SQL; los siguientes deben crearse desde /api/admin/users.
 ```
 
 ---
@@ -1919,13 +1451,7 @@ Prueba fuerte:
 # Pendientes inmediatos
 
 ```text
-[ ] Gestión admin de categorías:
-    - GET /api/admin/categories
-    - POST /api/admin/categories
-    - PUT /api/admin/categories/{id}
-    - DELETE /api/admin/categories/{id}
-
 [ ] CORS para frontend
-[ ] Tests automatizados
+[ ] Tests automatizados mínimos
 [ ] Preparación de deploy
 ```
