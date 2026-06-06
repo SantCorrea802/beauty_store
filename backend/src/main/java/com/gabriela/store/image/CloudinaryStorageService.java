@@ -79,4 +79,39 @@ public class CloudinaryStorageService {
             throw new BadRequestException("Formato de imagen no permitido. Use JPG, PNG o WEBP.");
         }
     }
+
+    // Borrar una imagen de Cloudinary usando su public_id, manejando casos donde la imagen no exista o ya haya sido eliminada.
+    public void deleteProductImage(String publicId) {
+        if (publicId == null || publicId.isBlank()) {
+            return;
+        }
+
+
+        // bloque try catch para manejar excepciones de IO y Runtime que puedan ocurrir durante la comunicación con Cloudinary.
+        try {
+            // map con parámetros para indicar que el recurso es una imagen y que se invalide la caché de Cloudinary después de eliminar.
+            Map<?, ?> result = cloudinary.uploader().destroy(
+                    publicId,
+                    ObjectUtils.asMap(
+                            "resource_type", "image",
+                            "invalidate", true
+                    )
+            );
+
+            Object deleteResult = result.get("result");
+
+            if ("ok".equals(deleteResult) || "not found".equals(deleteResult)) {
+                return;
+            }
+
+            throw new BadRequestException(
+                    "No se pudo eliminar la imagen de Cloudinary. Resultado: " + deleteResult
+            );
+
+        } catch (IOException e) {
+            throw new BadRequestException("No se pudo comunicar con Cloudinary para eliminar la imagen.");
+        } catch (RuntimeException e) {
+            throw new BadRequestException("No se pudo eliminar la imagen de Cloudinary: " + e.getMessage());
+        }
+    }
 }

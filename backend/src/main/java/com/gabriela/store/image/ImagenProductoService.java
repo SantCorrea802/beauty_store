@@ -99,7 +99,9 @@ public class ImagenProductoService {
 
     // Metodo para eliminar una imagen de un producto,Verifica que el producto
     // y la imagen existan, maneja la lógica para reasignar la imagen principal si es necesario,
-    // y registra la acción en el log de auditoría.
+    // y registra la acción en el log de auditoría. Tambien se encarga de eliminar la imagen de
+    // Cloudinary utilizando su public_id para asegurar que no queden archivos huérfanos
+    // en el almacenamiento externo después de eliminar la referencia en la base de datos.
     @Transactional
     public void deleteImage(Long idProducto, Long idImagen) {
         Producto producto = productoRepository.findById(idProducto)
@@ -110,6 +112,10 @@ public class ImagenProductoService {
         ImagenProducto imagen = imagenProductoRepository
                 .findByIdImagenAndProducto_IdProducto(idImagen, idProducto)
                 .orElseThrow(() -> new NotFoundException("Imagen no encontrada con id: " + idImagen));
+
+        String publicId = imagen.getPublicId();
+
+        cloudinaryStorageService.deleteProductImage(publicId);
 
         imagenProductoRepository.delete(imagen);
         imagenProductoRepository.flush();
