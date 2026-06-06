@@ -2,7 +2,7 @@
 
 Backend REST para una tienda de productos de belleza, maquillaje, cuidado capilar e higiene personal.
 
-Este backend cubre catálogo público, administración de productos, imágenes con Cloudinary, autenticación de administradores con JWT y auditoría básica de acciones administrativas.
+Este backend cubre catálogo público, administración de productos, imágenes con Cloudinary, autenticación de administradores con JWT, gestión básica de usuarios administradores y auditoría de acciones administrativas.
 
 ---
 
@@ -17,15 +17,15 @@ Implementado:
 [OK] Repositories con Spring Data JPA
 [OK] DTOs de entrada y salida
 [OK] Manejo global de errores
-[OK] Listar categorías
+[OK] Listar categorías públicas
 [OK] Listar productos activos
 [OK] Filtrar productos por categoría
 [OK] Consultar detalle de producto por slug
 [OK] Imagen principal en listado público
 [OK] Lista de imágenes en detalle de producto
-[OK] Crear productos
-[OK] Editar productos
-[OK] Activar/desactivar productos
+[OK] Crear productos desde API admin
+[OK] Editar productos desde API admin
+[OK] Activar/desactivar productos desde API admin
 [OK] Agregar imágenes por URL
 [OK] Subir imágenes reales a Cloudinary usando multipart/form-data
 [OK] Eliminar imágenes de PostgreSQL y Cloudinary
@@ -35,12 +35,18 @@ Implementado:
 [OK] Login admin con JWT
 [OK] Protección de endpoints /api/admin/**
 [OK] Auditoría usando el admin autenticado por JWT
+[OK] Gestión básica de usuarios admin desde API protegida
 ```
 
-Pendiente:
+Pendiente inmediato:
 
 ```text
-[ ] Gestión básica de usuarios admin desde API/panel
+[ ] Gestión admin de categorías desde API/panel:
+    - GET /api/admin/categories
+    - POST /api/admin/categories
+    - PUT /api/admin/categories/{id}
+    - DELETE /api/admin/categories/{id}
+
 [ ] CORS definitivo para frontend
 [ ] Tests automatizados
 [ ] Configuración final de deploy
@@ -86,7 +92,7 @@ JPA / Hibernate
 PostgreSQL
 ```
 
-Para subida de imágenes:
+Flujo de subida de imágenes:
 
 ```text
 Cliente / Postman
@@ -100,12 +106,14 @@ PostgreSQL
 Respuesta JSON
 ```
 
-Para endpoints admin protegidos:
+Flujo de autenticación admin:
 
 ```text
 POST /api/auth/login
         ↓
-JWT
+Backend valida email + password BCrypt
+        ↓
+Backend emite JWT
         ↓
 Authorization: Bearer <token>
         ↓
@@ -128,6 +136,7 @@ Service:
 - Crea, actualiza, activa y desactiva productos.
 - Administra imágenes.
 - Sube y elimina archivos en Cloudinary.
+- Administra usuarios admin.
 - Registra auditoría.
 
 Repository:
@@ -188,6 +197,17 @@ Reglas importantes de imágenes:
 - La imagen principal debe tener orden = 0.
 - Las imágenes secundarias deben tener orden >= 1.
 - No puede repetirse el mismo orden para el mismo producto.
+```
+
+Reglas importantes de usuarios admin:
+
+```text
+- Los admins tienen email único.
+- La contraseña nunca se guarda en texto plano.
+- usuario_admin.pass_hash guarda un hash BCrypt.
+- El rol se maneja con enum AdminRole.
+- Actualmente existe AdminRole.ADMIN.
+- Los endpoints /api/admin/** requieren JWT con rol ADMIN.
 ```
 
 ---
@@ -324,8 +344,8 @@ Debe ser secreto, largo y aleatorio. No debe estar en GitHub ni en el frontend.
 ## Endpoints públicos
 
 ```text
-GET /api/categories/**
-GET /api/products/**
+GET  /api/categories/**
+GET  /api/products/**
 POST /api/auth/login
 ```
 
@@ -357,7 +377,7 @@ Los administradores no deben guardar contraseñas en texto plano. La columna cor
 usuario_admin.pass_hash
 ```
 
-Para desarrollo se está usando una clase temporal llamada `GeneratePasswordHash.java` para generar hashes BCrypt.
+Para crear el primer admin o cambiar contraseñas manualmente en desarrollo, se usa una clase temporal local llamada `GeneratePasswordHash.java`.
 
 Ubicación sugerida:
 
@@ -392,11 +412,25 @@ Uso:
 
 Cada ejecución genera un hash diferente. Eso es normal porque BCrypt usa salt aleatorio.
 
+Después de implementar `POST /api/admin/users`, este archivo queda principalmente para:
+
+```text
+- crear el primer admin inicial;
+- reparar una contraseña localmente;
+- pruebas manuales controladas.
+```
+
+Los nuevos admins deben crearse normalmente desde:
+
+```http
+POST /api/admin/users
+```
+
 ---
 
-# Crear o actualizar administradores por SQL
+# Crear o actualizar el primer admin por SQL
 
-Actualmente, hasta implementar gestión de usuarios admin desde API/panel, los admins se crean manualmente por SQL.
+El primer admin inicial se puede crear manualmente por SQL porque todavía no existe una cuenta autenticada que pueda crear otras.
 
 ## Crear admin inicial
 
@@ -418,25 +452,6 @@ VALUES (
 ON CONFLICT (email) DO NOTHING;
 ```
 
-## Crear segundo admin de prueba
-
-```sql
-INSERT INTO usuario_admin (
-    email,
-    nombre,
-    pass_hash,
-    rol,
-    activo
-)
-VALUES (
-    'admin2@gabriela.com',
-    'Admin Dos',
-    '<HASH_BCRYPT_GENERADO>',
-    'ADMIN',
-    true
-);
-```
-
 ## Actualizar contraseña de un admin
 
 ```sql
@@ -454,7 +469,8 @@ SELECT
     nombre,
     rol,
     activo,
-    fecha_creacion
+    fecha_creacion,
+    fecha_ultima_actualizacion
 FROM usuario_admin
 ORDER BY id_usuario;
 ```
@@ -462,8 +478,8 @@ ORDER BY id_usuario;
 Resultado esperado:
 
 ```text
-Debe mostrar administradores activos con rol ADMIN.
-pass_hash debe empezar normalmente por $2a$, $2b$ o $2y$.
+Debe mostrar administradores con rol ADMIN.
+pass_hash debe empezar normalmente por $2a$, $2b$ o $2y$ si se consulta explícitamente.
 ```
 
 ---
@@ -569,6 +585,41 @@ DELETE /api/admin/products/2/images/5
 
 ---
 
+## Obtener IDs de usuarios admin
+
+```sql
+SELECT
+    id_usuario,
+    email,
+    nombre,
+    rol,
+    activo
+FROM usuario_admin
+ORDER BY id_usuario;
+```
+
+Usa:
+
+```text
+id_usuario -> para endpoints con {id} en /api/admin/users/{id}
+email      -> para login
+```
+
+Ejemplo:
+
+```text
+id_usuario = 3
+email = empleado@gabriela.com
+```
+
+Entonces usarías:
+
+```http
+PATCH /api/admin/users/3/deactivate
+```
+
+---
+
 # Pruebas en Postman
 
 Base URL:
@@ -626,7 +677,7 @@ Sin token, los endpoints admin deben responder `401 Unauthorized` o `403 Forbidd
 
 ---
 
-## 2. Listar categorías
+## 2. Listar categorías públicas
 
 ### Request
 
@@ -803,15 +854,22 @@ GET /api/products/no-existe
 
 ---
 
-## 7. Crear producto
+# Endpoints admin de productos
 
-Endpoint protegido. Requiere Bearer Token.
+Todos requieren:
+
+```http
+Authorization: Bearer <token>
+```
+
+---
+
+## 7. Crear producto
 
 ### Request
 
 ```http
 POST /api/admin/products
-Authorization: Bearer <token>
 Content-Type: application/json
 ```
 
@@ -864,13 +922,10 @@ Efectos esperados:
 
 ## 8. Editar producto
 
-Endpoint protegido. Requiere Bearer Token.
-
 ### Request
 
 ```http
 PUT /api/admin/products/{id}
-Authorization: Bearer <token>
 Content-Type: application/json
 ```
 
@@ -908,11 +963,6 @@ PUT /api/admin/products/2
       "id": 1,
       "nombre": "Maquillaje",
       "slug": "maquillaje"
-    },
-    {
-      "id": 4,
-      "nombre": "Labios",
-      "slug": "labios"
     }
   ],
   "imagenes": []
@@ -932,13 +982,10 @@ Efectos esperados:
 
 ## 9. Desactivar producto
 
-Endpoint protegido. Requiere Bearer Token.
-
 ### Request
 
 ```http
 PATCH /api/admin/products/{id}/deactivate
-Authorization: Bearer <token>
 ```
 
 Ejemplo:
@@ -980,13 +1027,10 @@ Efectos esperados:
 
 ## 10. Reactivar producto
 
-Endpoint protegido. Requiere Bearer Token.
-
 ### Request
 
 ```http
 PATCH /api/admin/products/{id}/activate
-Authorization: Bearer <token>
 ```
 
 Ejemplo:
@@ -1025,15 +1069,22 @@ Efectos esperados:
 
 ---
 
-## 11. Agregar imagen por URL
+# Endpoints admin de imágenes
 
-Endpoint protegido. Requiere Bearer Token.
+Todos requieren:
+
+```http
+Authorization: Bearer <token>
+```
+
+---
+
+## 11. Agregar imagen por URL
 
 ### Request
 
 ```http
 POST /api/admin/products/{id}/images
-Authorization: Bearer <token>
 Content-Type: application/json
 ```
 
@@ -1105,13 +1156,10 @@ Efectos esperados:
 
 ## 12. Subir imagen real a Cloudinary
 
-Endpoint protegido. Requiere Bearer Token.
-
 ### Request
 
 ```http
 POST /api/admin/products/{id}/images/upload
-Authorization: Bearer <token>
 Content-Type: multipart/form-data
 ```
 
@@ -1197,13 +1245,10 @@ Validaciones esperadas:
 
 ## 13. Marcar imagen como principal
 
-Endpoint protegido. Requiere Bearer Token.
-
 ### Request
 
 ```http
 PATCH /api/admin/products/{id}/images/{imageId}/main
-Authorization: Bearer <token>
 ```
 
 Ejemplo:
@@ -1248,13 +1293,10 @@ Efectos esperados:
 
 ## 14. Eliminar imagen
 
-Endpoint protegido. Requiere Bearer Token.
-
 ### Request
 
 ```http
 DELETE /api/admin/products/{id}/images/{imageId}
-Authorization: Bearer <token>
 ```
 
 Ejemplo:
@@ -1287,6 +1329,219 @@ Efectos esperados:
 - Si tiene public_id de Cloudinary, elimina el asset real de Cloudinary.
 - Si era la principal y quedan imágenes, promueve/reordena otra imagen.
 - Registra auditoría IMAGE_DELETED con el admin autenticado.
+```
+
+---
+
+# Endpoints admin de usuarios
+
+Todos requieren:
+
+```http
+Authorization: Bearer <token>
+```
+
+Actualmente todos los usuarios creados desde API se crean con rol:
+
+```text
+ADMIN
+```
+
+El rol está modelado como enum:
+
+```java
+public enum AdminRole {
+    ADMIN
+}
+```
+
+---
+
+## 15. Listar usuarios admin
+
+### Request
+
+```http
+GET /api/admin/users
+```
+
+### Body
+
+No requiere body.
+
+### Respuesta esperada
+
+```json
+[
+  {
+    "id": 1,
+    "email": "admin@gabriela.com",
+    "nombre": "Gabriela",
+    "rol": "ADMIN",
+    "activo": true,
+    "fechaCreacion": "2026-06-04T00:00:00Z",
+    "fechaUltimaActualizacion": "2026-06-04T00:00:00Z"
+  }
+]
+```
+
+---
+
+## 16. Crear usuario admin
+
+### Request
+
+```http
+POST /api/admin/users
+Content-Type: application/json
+```
+
+### Body
+
+```json
+{
+  "email": "empleado@gabriela.com",
+  "nombre": "Empleado Tienda",
+  "password": "Empleado123"
+}
+```
+
+### Respuesta esperada
+
+```json
+{
+  "id": 3,
+  "email": "empleado@gabriela.com",
+  "nombre": "Empleado Tienda",
+  "rol": "ADMIN",
+  "activo": true,
+  "fechaCreacion": "2026-06-04T00:00:00Z",
+  "fechaUltimaActualizacion": "2026-06-04T00:00:00Z"
+}
+```
+
+Efectos esperados:
+
+```text
+- Crea un nuevo usuario admin.
+- Normaliza email a minúsculas.
+- Guarda pass_hash con BCrypt.
+- No devuelve pass_hash en la respuesta.
+- El nuevo usuario puede iniciar sesión con POST /api/auth/login.
+```
+
+---
+
+## 17. Desactivar usuario admin
+
+### Request
+
+```http
+PATCH /api/admin/users/{id}/deactivate
+```
+
+Ejemplo:
+
+```http
+PATCH /api/admin/users/3/deactivate
+```
+
+### Body
+
+No requiere body.
+
+### Respuesta esperada
+
+```json
+{
+  "id": 3,
+  "email": "empleado@gabriela.com",
+  "nombre": "Empleado Tienda",
+  "rol": "ADMIN",
+  "activo": false,
+  "fechaCreacion": "2026-06-04T00:00:00Z",
+  "fechaUltimaActualizacion": "2026-06-04T01:00:00Z"
+}
+```
+
+Efectos esperados:
+
+```text
+- usuario_admin.activo pasa a false.
+- El usuario desactivado no debe poder hacer login.
+```
+
+---
+
+## 18. Reactivar usuario admin
+
+### Request
+
+```http
+PATCH /api/admin/users/{id}/activate
+```
+
+Ejemplo:
+
+```http
+PATCH /api/admin/users/3/activate
+```
+
+### Body
+
+No requiere body.
+
+### Respuesta esperada
+
+```json
+{
+  "id": 3,
+  "email": "empleado@gabriela.com",
+  "nombre": "Empleado Tienda",
+  "rol": "ADMIN",
+  "activo": true,
+  "fechaCreacion": "2026-06-04T00:00:00Z",
+  "fechaUltimaActualizacion": "2026-06-04T01:05:00Z"
+}
+```
+
+Efectos esperados:
+
+```text
+- usuario_admin.activo pasa a true.
+- El usuario vuelve a poder iniciar sesión.
+```
+
+---
+
+# Endpoints admin de categorías
+
+Pendiente de implementación.
+
+Objetivo funcional:
+
+```text
+Permitir que el panel admin pueda crear, editar, listar y eliminar categorías sin usar SQL.
+```
+
+Endpoints previstos:
+
+```http
+GET    /api/admin/categories
+POST   /api/admin/categories
+PUT    /api/admin/categories/{id}
+DELETE /api/admin/categories/{id}
+```
+
+Criterios esperados:
+
+```text
+- Requiere Bearer Token.
+- El nombre de categoría es obligatorio.
+- El slug se genera automáticamente desde el nombre.
+- No se permiten nombres duplicados.
+- Eliminar una categoría no debe eliminar productos.
+- Si producto_categoria tiene ON DELETE CASCADE, al borrar categoría se eliminan solo sus relaciones.
 ```
 
 ---
@@ -1481,7 +1736,48 @@ GET /api/products/{slug} debe responder 404.
 
 ---
 
-## 9. Verificar auditoría
+## 9. Verificar usuarios admin
+
+```sql
+SELECT
+    id_usuario,
+    email,
+    nombre,
+    rol,
+    activo,
+    fecha_creacion,
+    fecha_ultima_actualizacion
+FROM usuario_admin
+ORDER BY id_usuario;
+```
+
+Resultado esperado:
+
+```text
+Debe listar los usuarios admin creados por SQL o por POST /api/admin/users.
+```
+
+Verificar que la contraseña no está en texto plano:
+
+```sql
+SELECT
+    id_usuario,
+    email,
+    pass_hash
+FROM usuario_admin
+ORDER BY id_usuario;
+```
+
+Resultado esperado:
+
+```text
+pass_hash debe iniciar por $2a$, $2b$ o $2y$.
+No debe contener la contraseña real.
+```
+
+---
+
+## 10. Verificar auditoría
 
 ```sql
 SELECT
@@ -1554,6 +1850,18 @@ Prueba fuerte:
 }
 ```
 
+## Email duplicado en usuario admin
+
+```json
+{
+  "timestamp": "2026-05-13T...",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Ya existe un usuario admin con ese email.",
+  "path": "/api/admin/users"
+}
+```
+
 ## Imagen secundaria con orden 0
 
 ```json
@@ -1603,20 +1911,19 @@ Prueba fuerte:
 - No poner CLOUDINARY_API_SECRET en frontend.
 - No dejar endpoints /api/admin/** abiertos.
 - No crear un endpoint público de registro de admins.
+- No devolver pass_hash en respuestas HTTP.
 ```
-
-Actualmente, crear admins por SQL es una solución temporal para bootstrap y desarrollo. En una fase siguiente se implementará gestión básica de usuarios admin desde endpoints protegidos.
 
 ---
 
 # Pendientes inmediatos
 
 ```text
-[ ] Gestión básica de usuarios admin:
-    - POST /api/admin/users
-    - GET /api/admin/users
-    - PATCH /api/admin/users/{id}/deactivate
-    - PATCH /api/admin/users/{id}/activate
+[ ] Gestión admin de categorías:
+    - GET /api/admin/categories
+    - POST /api/admin/categories
+    - PUT /api/admin/categories/{id}
+    - DELETE /api/admin/categories/{id}
 
 [ ] CORS para frontend
 [ ] Tests automatizados
