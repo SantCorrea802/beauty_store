@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 @Service
 public class ImagenProductoService {
 
@@ -54,10 +56,18 @@ public class ImagenProductoService {
 
 
         // Si el cliente no especifica un orden, asignamos el siguiente orden disponible para este producto.
-        int orden = resolveImageOrder(idProducto, request.orden());
+        long imageCount = imagenProductoRepository.countByProducto_IdProducto(idProducto);
 
-        boolean shouldBePrincipal = Boolean.TRUE.equals(request.principal())
-                || imagenProductoRepository.countByProducto_IdProducto(idProducto) == 0;
+        boolean shouldBePrincipal = Boolean.TRUE.equals(request.principal()) || imageCount == 0;
+
+        int finalOrden;
+
+        if (shouldBePrincipal) {
+            reorderExistingImagesStartingAtOne(idProducto);
+            finalOrden = 0;
+        } else {
+            finalOrden = resolveSecondaryImageOrder(idProducto, request.orden());
+        }
         // Si la nueva imagen debe ser marcada como principal, primero desmarcamos cualquier imagen que ya sea principal para este producto.
         if (shouldBePrincipal) {
             imagenProductoRepository.clearPrincipalByProductoId(idProducto);
@@ -68,7 +78,7 @@ public class ImagenProductoService {
                 producto,
                 normalizeNullableText(request.publicId()),
                 request.url().trim(),
-                orden,
+                finalOrden,
                 shouldBePrincipal,
                 normalizeNullableText(request.altText())
         );
@@ -101,24 +111,22 @@ public class ImagenProductoService {
                 .findByIdImagenAndProducto_IdProducto(idImagen, idProducto)
                 .orElseThrow(() -> new NotFoundException("Imagen no encontrada con id: " + idImagen));
 
-
-        // Antes de eliminar la imagen, verificamos si era la imagen principal del producto.
-        boolean wasPrincipal = imagen.isPrincipal();
-
         imagenProductoRepository.delete(imagen);
         imagenProductoRepository.flush();
 
-        // Si la imagen eliminada era la principal, buscamos la siguiente imagen con el orden más bajo para marcarla como principal.
-        if (wasPrincipal) {
-            imagenProductoRepository.findFirstByProducto_IdProductoOrderByOrdenAsc(idProducto)
-                    .ifPresent(nextImage -> {
-                        nextImage.marcarComoPrincipal();
-                        imagenProductoRepository.save(nextImage);
-                    });
+        List<ImagenProducto> remainingImages =
+                imagenProductoRepository.findByProducto_IdProductoOrderByOrdenAsc(idProducto);
+
+        if (!remainingImages.isEmpty()) {
+            Long principalImageId = remainingImages.stream()
+                    .filter(ImagenProducto::isPrincipal)
+                    .map(ImagenProducto::getIdImagen)
+                    .findFirst()
+                    .orElse(remainingImages.get(0).getIdImagen());
+
+            reorderImagesWithPrincipal(idProducto, principalImageId);
         }
 
-
-        // Registramos la eliminación de la imagen en el log de auditoría del producto.
         productoAuditLogRepository.save(new ProductoAuditLog(
                 producto,
                 admin,
@@ -147,14 +155,11 @@ public class ImagenProductoService {
                 .findByIdImagenAndProducto_IdProducto(idImagen, idProducto)
                 .orElseThrow(() -> new NotFoundException("Imagen no encontrada con id: " + idImagen));
 
-        imagenProductoRepository.clearPrincipalByProductoId(idProducto);
-        imagenProductoRepository.flush();
+        reorderImagesWithPrincipal(idProducto, idImagen);
 
-
-        // Marcamos la imagen especificada como la nueva imagen principal del producto.
-        imagen.marcarComoPrincipal();
-
-        ImagenProducto savedImage = imagenProductoRepository.save(imagen);
+        ImagenProducto savedImage = imagenProductoRepository
+                .findByIdImagenAndProducto_IdProducto(idImagen, idProducto)
+                .orElseThrow(() -> new NotFoundException("Imagen no encontrada con id: " + idImagen));
 
 
         // Registramos el cambio de imagen principal en el log de auditoría del producto.
@@ -201,6 +206,121 @@ public class ImagenProductoService {
         return value.trim();
     }
 
+
+    //Metodo para resolver el orden de una imagen secundaria, asegurando que sea mayor o igual a 1 (ya que el orden 0 es para la imagen principal) y que no exista otra imagen con el mismo orden para el producto especificado.
+
+    private int resolveSecondaryImageOrder(Long idProducto, Integer requestedOrder) {
+        int resolvedOrder = requestedOrder != null
+                ? requestedOrder
+                : nextImageOrder(idProducto);
+
+        if (resolvedOrder <= 0) {
+            throw new BadRequestException(
+                    "El orden de una imagen secundaria debe ser mayor o igual a 1. " +
+                            "La imagen principal siempre usa orden 0."
+            );
+        }
+
+        if (imagenProductoRepository.existsByProducto_IdProductoAndOrden(idProducto, resolvedOrder)) {
+            throw new BadRequestException(
+                    "Ya existe una imagen con orden " + resolvedOrder + " para el producto " + idProducto + "."
+            );
+        }
+
+        return resolvedOrder;
+    }
+
+
+    // Metodo para reordenar las imagenes existentes de un producto a partir del orden 1, lo que es útil cuando se elimina la imagen principal (orden 0) y se necesita promover una imagen secundaria a principal, asegurando que el orden de las imagenes secundarias se mantenga consistente y sin huecos después de la eliminación o promoción de la imagen principal.
+
+    private void reorderExistingImagesStartingAtOne(Long idProducto) {
+        List<ImagenProducto> images = imagenProductoRepository
+                .findByProducto_IdProductoOrderByOrdenAsc(idProducto);
+
+        if (images.isEmpty()) {
+            return;
+        }
+
+        int maxOrder = images.stream()
+                .mapToInt(ImagenProducto::getOrden)
+                .max()
+                .orElse(0);
+
+        int tempBase = maxOrder + images.size() + 1000;
+
+        for (int i = 0; i < images.size(); i++) {
+            ImagenProducto image = images.get(i);
+            image.quitarComoPrincipal();
+            image.cambiarOrden(tempBase + i);
+        }
+
+        imagenProductoRepository.saveAll(images);
+        imagenProductoRepository.flush();
+
+        int order = 1;
+
+        for (ImagenProducto image : images) {
+            image.quitarComoPrincipal();
+            image.cambiarOrden(order);
+            order++;
+        }
+
+        imagenProductoRepository.saveAll(images);
+        imagenProductoRepository.flush();
+    }
+
+    // Aqui se implementa un metodo para reordenar las imagenes de un producto cuando se marca una
+    // imagen secundaria como principal, asegurando que la nueva imagen principal tenga el orden 0
+    // y que las imagenes secundarias se reordenen a partir del orden 1, manteniendo la consistencia
+    // del orden de las imagenes y reflejando correctamente el cambio de imagen principal.
+    private void reorderImagesWithPrincipal(Long idProducto, Long principalImageId) {
+        List<ImagenProducto> images = imagenProductoRepository
+                .findByProducto_IdProductoOrderByOrdenAsc(idProducto);
+
+        if (images.isEmpty()) {
+            return;
+        }
+
+        ImagenProducto principalImage = images.stream()
+                .filter(image -> image.getIdImagen().equals(principalImageId))
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException("Imagen no encontrada con id: " + principalImageId));
+
+        List<ImagenProducto> secondaryImages = images.stream()
+                .filter(image -> !image.getIdImagen().equals(principalImageId))
+                .toList();
+
+        int maxOrder = images.stream()
+                .mapToInt(ImagenProducto::getOrden)
+                .max()
+                .orElse(0);
+
+        int tempBase = maxOrder + images.size() + 1000;
+
+        for (int i = 0; i < images.size(); i++) {
+            ImagenProducto image = images.get(i);
+            image.quitarComoPrincipal();
+            image.cambiarOrden(tempBase + i);
+        }
+
+        imagenProductoRepository.saveAll(images);
+        imagenProductoRepository.flush();
+
+        principalImage.marcarComoPrincipal();
+        principalImage.cambiarOrden(0);
+
+        int order = 1;
+
+        for (ImagenProducto image : secondaryImages) {
+            image.quitarComoPrincipal();
+            image.cambiarOrden(order);
+            order++;
+        }
+
+        imagenProductoRepository.saveAll(images);
+        imagenProductoRepository.flush();
+    }
+
     // Metodo auxiliar para convertir una entidad ImagenProducto a un DTO ImageResponse
     // que se devuelve al cliente después de crear o actualizar una imagen.
     private ImageResponse toResponse(ImagenProducto imagen) {
@@ -231,14 +351,17 @@ public class ImagenProductoService {
 
         UsuarioAdmin admin = getCurrentTemporaryAdmin();
 
-        int finalOrden = resolveImageOrder(idProducto, orden);
+        long imageCount = imagenProductoRepository.countByProducto_IdProducto(idProducto);
 
-        boolean shouldBePrincipal = Boolean.TRUE.equals(principal)
-                || imagenProductoRepository.countByProducto_IdProducto(idProducto) == 0;
+        boolean shouldBePrincipal = Boolean.TRUE.equals(principal) || imageCount == 0;
+
+        int finalOrden;
 
         if (shouldBePrincipal) {
-            imagenProductoRepository.clearPrincipalByProductoId(idProducto);
-            imagenProductoRepository.flush();
+            reorderExistingImagesStartingAtOne(idProducto);
+            finalOrden = 0;
+        } else {
+            finalOrden = resolveSecondaryImageOrder(idProducto, orden);
         }
 
         CloudinaryUploadResult uploadResult =

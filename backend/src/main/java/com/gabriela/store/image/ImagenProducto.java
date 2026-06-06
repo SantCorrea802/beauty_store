@@ -57,6 +57,10 @@ public class ImagenProducto {
         }
     }
 
+    public void cambiarOrden(int orden) {
+        this.orden = orden;
+    }
+
     public void marcarComoPrincipal() {
         this.principal = true;
     }
@@ -64,5 +68,4 @@ public class ImagenProducto {
     public void quitarComoPrincipal() {
         this.principal = false;
     }
-
 }
