@@ -49,17 +49,56 @@ public class UsuarioAdmin {
         this.activo = true;
     }
 
+    public UsuarioAdmin(String email, String nombre, String passHash) {
+        this.email = email;
+        this.nombre = nombre;
+        this.passHash = passHash;
+        this.rol = AdminRole.ADMIN;
+        this.activo = true;
+    }
+
+
     // triger antes de insert
     @PrePersist
-    void prePersist(){
+    void prePersist() {
         OffsetDateTime now = OffsetDateTime.now();
-        this.fechaCreacion = now;
-        this.fechaUltimaActualizacion = now;
+
+        if (this.fechaCreacion == null) {
+            this.fechaCreacion = now;
+        }
+
+        if (this.fechaUltimaActualizacion == null) {
+            this.fechaUltimaActualizacion = now;
+        }
+
+        if (this.rol == null) {
+            this.rol = AdminRole.ADMIN;
+        }
     }
+
+
 
     // trigger antes de update
     @PreUpdate
     void preUpdate(){
         this.fechaUltimaActualizacion = OffsetDateTime.now();
+    }
+
+    public boolean activar() {
+        if (this.activo) {
+            return false;
+        }
+
+        this.activo = true;
+        return true;
+    }
+
+    public boolean desactivar() {
+        if (!this.activo) {
+            return false;
+        }
+
+        this.activo = false;
+        return true;
     }
 }
