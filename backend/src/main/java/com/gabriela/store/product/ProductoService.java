@@ -3,6 +3,7 @@ package com.gabriela.store.product;
 import com.gabriela.store.audit.AuditAction;
 import com.gabriela.store.audit.ProductoAuditLog;
 import com.gabriela.store.audit.ProductoAuditLogRepository;
+import com.gabriela.store.auth.CurrentAdminService;
 import com.gabriela.store.category.Categoria;
 import com.gabriela.store.category.CategoriaRepository;
 import com.gabriela.store.category.dto.CategoryResponse;
@@ -31,7 +32,7 @@ public class ProductoService {
     private final CategoriaRepository categoriaRepository;
     private final ProductoCategoriaRepository productoCategoriaRepository;
     private final ProductoAuditLogRepository productoAuditLogRepository;
-    private final UsuarioAdminRepository usuarioAdminRepository;
+    private final CurrentAdminService currentAdminService;
     private final ImagenProductoRepository imagenProductoRepository;
 
     public ProductoService(
@@ -39,14 +40,14 @@ public class ProductoService {
             CategoriaRepository categoriaRepository,
             ProductoCategoriaRepository productoCategoriaRepository,
             ProductoAuditLogRepository productoAuditLogRepository,
-            UsuarioAdminRepository usuarioAdminRepository,
+            CurrentAdminService currentAdminService,
             ImagenProductoRepository imagenProductoRepository
     ) {
         this.productoRepository = productoRepository;
         this.categoriaRepository = categoriaRepository;
         this.productoCategoriaRepository = productoCategoriaRepository;
         this.productoAuditLogRepository = productoAuditLogRepository;
-        this.usuarioAdminRepository = usuarioAdminRepository;
+        this.currentAdminService = currentAdminService;
         this.imagenProductoRepository = imagenProductoRepository;
     }
     // el siguiente metodo devuelve los productos activos
@@ -95,11 +96,7 @@ public class ProductoService {
 
         String slug = generateUniqueSlug(request.nombre());
 
-        // Temporal: mientras no exista autenticación real, usamos el primer admin.
-        UsuarioAdmin admin = usuarioAdminRepository.findAll()
-                .stream()
-                .findFirst()
-                .orElseThrow(() -> new BadRequestException("No existe un usuario admin para asociar la creación del producto."));
+        UsuarioAdmin admin = currentAdminService.getCurrentAdmin();
 
         Producto producto = new Producto(
                 request.nombre().trim(),
@@ -273,10 +270,7 @@ public class ProductoService {
             throw new BadRequestException("Una o más categorías no existen.");
         }
 
-        UsuarioAdmin admin = usuarioAdminRepository.findAll()
-                .stream()
-                .findFirst()
-                .orElseThrow(() -> new BadRequestException("No existe un usuario admin para asociar la edición del producto."));
+        UsuarioAdmin admin = currentAdminService.getCurrentAdmin();
 
         String slug = generateUniqueSlugForUpdate(request.nombre(), producto.getIdProducto());
 
@@ -351,10 +345,7 @@ public class ProductoService {
         Producto producto = productoRepository.findById(idProducto)
                 .orElseThrow(() -> new NotFoundException("Producto no encontrado con id: " + idProducto));
 
-        UsuarioAdmin admin = usuarioAdminRepository.findAll()
-                .stream()
-                .findFirst()
-                .orElseThrow(() -> new BadRequestException("No existe un usuario admin para asociar la desactivación del producto."));
+        UsuarioAdmin admin = currentAdminService.getCurrentAdmin();
 
         boolean changed = producto.desactivar(admin);
 
@@ -386,10 +377,7 @@ public class ProductoService {
         Producto producto = productoRepository.findById(idProducto)
                 .orElseThrow(() -> new NotFoundException("Producto no encontrado con id: " + idProducto));
 
-        UsuarioAdmin admin = usuarioAdminRepository.findAll()
-                .stream()
-                .findFirst()
-                .orElseThrow(() -> new BadRequestException("No existe un usuario admin para asociar la reactivación del producto."));
+        UsuarioAdmin admin = currentAdminService.getCurrentAdmin();
 
         boolean changed = producto.activar(admin);
 

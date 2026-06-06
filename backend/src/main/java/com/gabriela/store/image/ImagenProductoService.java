@@ -10,7 +10,7 @@ import com.gabriela.store.image.dto.ImageResponse;
 import com.gabriela.store.product.Producto;
 import com.gabriela.store.product.ProductoRepository;
 import com.gabriela.store.user.UsuarioAdmin;
-import com.gabriela.store.user.UsuarioAdminRepository;
+import com.gabriela.store.auth.CurrentAdminService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -25,20 +25,20 @@ public class ImagenProductoService {
     // los productos en sí, los usuarios admin y el log de auditoría de productos.
     private final ImagenProductoRepository imagenProductoRepository;
     private final ProductoRepository productoRepository;
-    private final UsuarioAdminRepository usuarioAdminRepository;
+    private final CurrentAdminService currentAdminService;
     private final ProductoAuditLogRepository productoAuditLogRepository;
     private final CloudinaryStorageService cloudinaryStorageService;
 
     public ImagenProductoService(
             ImagenProductoRepository imagenProductoRepository,
             ProductoRepository productoRepository,
-            UsuarioAdminRepository usuarioAdminRepository,
+            CurrentAdminService currentAdminService,
             ProductoAuditLogRepository productoAuditLogRepository,
             CloudinaryStorageService cloudinaryStorageService
     ) {
         this.imagenProductoRepository = imagenProductoRepository;
         this.productoRepository = productoRepository;
-        this.usuarioAdminRepository = usuarioAdminRepository;
+        this.currentAdminService = currentAdminService;
         this.productoAuditLogRepository = productoAuditLogRepository;
         this.cloudinaryStorageService = cloudinaryStorageService;
     }
@@ -52,7 +52,7 @@ public class ImagenProductoService {
         Producto producto = productoRepository.findById(idProducto)
                 .orElseThrow(() -> new NotFoundException("Producto no encontrado con id: " + idProducto));
 
-        UsuarioAdmin admin = getCurrentTemporaryAdmin();
+        UsuarioAdmin admin = currentAdminService.getCurrentAdmin();
 
 
         // Si el cliente no especifica un orden, asignamos el siguiente orden disponible para este producto.
@@ -107,7 +107,7 @@ public class ImagenProductoService {
         Producto producto = productoRepository.findById(idProducto)
                 .orElseThrow(() -> new NotFoundException("Producto no encontrado con id: " + idProducto));
 
-        UsuarioAdmin admin = getCurrentTemporaryAdmin();
+        UsuarioAdmin admin = currentAdminService.getCurrentAdmin();
 
         ImagenProducto imagen = imagenProductoRepository
                 .findByIdImagenAndProducto_IdProducto(idImagen, idProducto)
@@ -154,7 +154,7 @@ public class ImagenProductoService {
         Producto producto = productoRepository.findById(idProducto)
                 .orElseThrow(() -> new NotFoundException("Producto no encontrado con id: " + idProducto));
 
-        UsuarioAdmin admin = getCurrentTemporaryAdmin();
+        UsuarioAdmin admin = currentAdminService.getCurrentAdmin();
 
         // Verificamos que la imagen exista y pertenezca al producto especificado.
         ImagenProducto imagen = imagenProductoRepository
@@ -192,14 +192,14 @@ public class ImagenProductoService {
 
     // Metodo auxiliar para obtener un usuario admin temporal para asociar las acciones de auditoría,
     // ya que no se ha implementado la autenticación en esta etapa del proyecto
-    private UsuarioAdmin getCurrentTemporaryAdmin() {
-        return usuarioAdminRepository.findAll()
-                .stream()
-                .findFirst()
-                .orElseThrow(() -> new BadRequestException(
-                        "No existe un usuario admin para asociar la operación."
-                ));
-    }
+    //private UsuarioAdmin getCurrentTemporaryAdmin() {
+    //    return usuarioAdminRepository.findAll()
+    //            .stream()
+    //            .findFirst()
+    //            .orElseThrow(() -> new BadRequestException(
+    //                    "No existe un usuario admin para asociar la operación."
+    //            ));
+    //}
 
     // Metodo auxiliar para normalizar textos que pueden ser nulos,
     // como el publicId y el altText de las imagenes
@@ -355,7 +355,7 @@ public class ImagenProductoService {
         Producto producto = productoRepository.findById(idProducto)
                 .orElseThrow(() -> new NotFoundException("Producto no encontrado con id: " + idProducto));
 
-        UsuarioAdmin admin = getCurrentTemporaryAdmin();
+        UsuarioAdmin admin = currentAdminService.getCurrentAdmin();
 
         long imageCount = imagenProductoRepository.countByProducto_IdProducto(idProducto);
 
@@ -395,22 +395,5 @@ public class ImagenProductoService {
     }
 
 
-    // validacion para resolver el orden de una nueva imagen, asegurando que no sea negativo y que no exista otra imagen con el mismo orden para el producto especificado.
-    private int resolveImageOrder(Long idProducto, Integer requestedOrder) {
-        int resolvedOrder = requestedOrder != null
-                ? requestedOrder
-                : nextImageOrder(idProducto);
 
-        if (resolvedOrder < 0) {
-            throw new BadRequestException("El orden de la imagen no puede ser negativo.");
-        }
-
-        if (imagenProductoRepository.existsByProducto_IdProductoAndOrden(idProducto, resolvedOrder)) {
-            throw new BadRequestException(
-                    "Ya existe una imagen con orden " + resolvedOrder + " para el producto " + idProducto + "."
-            );
-        }
-
-        return resolvedOrder;
-    }
 }
