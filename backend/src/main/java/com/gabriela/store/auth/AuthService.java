@@ -50,7 +50,8 @@ public class AuthService {
                 .expiresAt(expiresAt)
                 .subject(admin.getEmail())
                 .claim("userId", admin.getIdUsuario())
-                .claim("roles", List.of(admin.getRol()))
+                .claim("accountType", "ADMIN")
+                .claim("roles", List.of(admin.getRol().name()))
                 .build();
 
         JwsHeader header = JwsHeader.with(() -> "HS256").build();

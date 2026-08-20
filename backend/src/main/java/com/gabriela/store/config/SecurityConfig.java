@@ -23,9 +23,15 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/customers/register").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/customers/login").permitAll()
+
                         .requestMatchers("/api/categories/**").permitAll()
                         .requestMatchers("/api/products/**").permitAll()
+
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/me", "/api/me/**").hasRole("CUSTOMER")
+
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 ->
