@@ -23,4 +23,19 @@ public class DevConsoleEmailSender implements EmailSender {
                 ============================================================
                 """, to, name, verificationUrl);
     }
+
+    @Override
+    public void sendPasswordResetEmail(String to, String name, String passwordResetUrl) {
+        logger.info("""
+                
+                ============================================================
+                [DEV EMAIL] Recuperación de contraseña
+                Para: {}
+                Nombre: {}
+                
+                Link para cambiar contraseña:
+                {}
+                ============================================================
+                """, to, name, passwordResetUrl);
+    }
 }

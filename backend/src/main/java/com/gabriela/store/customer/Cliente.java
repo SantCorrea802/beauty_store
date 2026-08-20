@@ -54,6 +54,10 @@ public class Cliente {
         this.fechaEmailVerificado = OffsetDateTime.now();
     }
 
+    public void actualizarPasswordHash(String nuevoPassHash) {
+        this.passHash = nuevoPassHash;
+    }
+
     public Cliente(String email, String nombre, String telefono, String passHash) {
         this.email = email;
         this.nombre = nombre;
