@@ -8,6 +8,8 @@ public record CustomerResponse(
         String nombre,
         String telefono,
         boolean activo,
+        boolean emailVerificado,
+        OffsetDateTime fechaEmailVerificado,
         OffsetDateTime fechaCreacion,
         OffsetDateTime fechaUltimaActualizacion
 ) {

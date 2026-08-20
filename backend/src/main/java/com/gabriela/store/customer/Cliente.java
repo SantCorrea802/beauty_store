@@ -39,6 +39,21 @@ public class Cliente {
     @Column(name = "fecha_ultima_actualizacion", nullable = false)
     private OffsetDateTime fechaUltimaActualizacion;
 
+    @Column(name = "email_verificado", nullable = false)
+    private boolean emailVerificado = false;
+
+    @Column(name = "fecha_email_verificado")
+    private OffsetDateTime fechaEmailVerificado;
+
+    public void marcarEmailComoVerificado() {
+        if (this.emailVerificado) {
+            return;
+        }
+
+        this.emailVerificado = true;
+        this.fechaEmailVerificado = OffsetDateTime.now();
+    }
+
     public Cliente(String email, String nombre, String telefono, String passHash) {
         this.email = email;
         this.nombre = nombre;

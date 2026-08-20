@@ -8,6 +8,7 @@ import com.gabriela.store.customer.dto.CustomerResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.*;
+import com.gabriela.store.customer.verification.CustomerEmailVerificationService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,16 +22,19 @@ public class CustomerAuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtEncoder jwtEncoder;
     private final long expiresMinutes;
+    private final CustomerEmailVerificationService customerEmailVerificationService;
 
     public CustomerAuthService(
             ClienteRepository clienteRepository,
             PasswordEncoder passwordEncoder,
             JwtEncoder jwtEncoder,
+            CustomerEmailVerificationService customerEmailVerificationService,
             @Value("${app.jwt.expires-minutes}") long expiresMinutes
     ) {
         this.clienteRepository = clienteRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtEncoder = jwtEncoder;
+        this.customerEmailVerificationService = customerEmailVerificationService;
         this.expiresMinutes = expiresMinutes;
     }
 
@@ -51,6 +55,8 @@ public class CustomerAuthService {
 
         Cliente savedCustomer = clienteRepository.save(cliente);
 
+        customerEmailVerificationService.createAndSendVerificationToken(savedCustomer);
+
         return toResponse(savedCustomer);
     }
 
@@ -61,6 +67,10 @@ public class CustomerAuthService {
 
         if (!passwordEncoder.matches(request.password(), cliente.getPassHash())) {
             throw new BadRequestException("Credenciales inválidas.");
+        }
+
+        if (!cliente.isEmailVerificado()) {
+            throw new BadRequestException("Debes verificar tu correo antes de iniciar sesión.");
         }
 
         Instant now = Instant.now();
@@ -98,6 +108,8 @@ public class CustomerAuthService {
                 cliente.getNombre(),
                 cliente.getTelefono(),
                 cliente.isActivo(),
+                cliente.isEmailVerificado(),
+                cliente.getFechaEmailVerificado(),
                 cliente.getFechaCreacion(),
                 cliente.getFechaUltimaActualizacion()
         );

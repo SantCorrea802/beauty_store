@@ -31,8 +31,14 @@ public class CurrentCustomerService {
             throw new BadRequestException("El token no contiene identificador de cliente.");
         }
 
-        return clienteRepository.findById(userId.longValue())
+        Cliente cliente = clienteRepository.findById(userId.longValue())
                 .filter(Cliente::isActivo)
                 .orElseThrow(() -> new NotFoundException("Cliente autenticado no encontrado o inactivo."));
+
+        if (!cliente.isEmailVerificado()) {
+            throw new BadRequestException("Debes verificar tu correo antes de usar esta funcionalidad.");
+        }
+
+        return cliente;
     }
 }

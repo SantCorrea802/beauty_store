@@ -23,6 +23,8 @@ public class CustomerMeController {
                 cliente.getNombre(),
                 cliente.getTelefono(),
                 cliente.isActivo(),
+                cliente.isEmailVerificado(),
+                cliente.getFechaEmailVerificado(),
                 cliente.getFechaCreacion(),
                 cliente.getFechaUltimaActualizacion()
         );
