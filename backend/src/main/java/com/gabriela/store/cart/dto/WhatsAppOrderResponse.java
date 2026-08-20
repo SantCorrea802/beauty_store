@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 
 public record WhatsAppOrderResponse(
         String message,
-        String whatsappurl,
+        String whatsappUrl,
         Integer totalItems,
         BigDecimal total
 ) {
