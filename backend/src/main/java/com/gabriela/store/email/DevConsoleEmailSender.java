@@ -1,41 +1,37 @@
 package com.gabriela.store.email;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(
+        name = "app.email.provider",
+        havingValue = "dev",
+        matchIfMissing = true
+)
 public class DevConsoleEmailSender implements EmailSender {
 
-    private static final Logger logger = LoggerFactory.getLogger(DevConsoleEmailSender.class);
-
     @Override
-    public void sendVerificationEmail(String to, String name, String verificationUrl) {
-        logger.info("""
-                
-                ============================================================
-                [DEV EMAIL] Verificación de correo
-                Para: {}
-                Nombre: {}
-                
-                Link de verificación:
-                {}
-                ============================================================
-                """, to, name, verificationUrl);
+    public void sendVerificationEmail(String to, String customerName, String verificationUrl) {
+        System.out.println();
+        System.out.println("==============================================");
+        System.out.println("[DEV EMAIL] Verificación de correo");
+        System.out.println("Para: " + to);
+        System.out.println("Nombre: " + customerName);
+        System.out.println("Link: " + verificationUrl);
+        System.out.println("==============================================");
+        System.out.println();
     }
 
     @Override
-    public void sendPasswordResetEmail(String to, String name, String passwordResetUrl) {
-        logger.info("""
-                
-                ============================================================
-                [DEV EMAIL] Recuperación de contraseña
-                Para: {}
-                Nombre: {}
-                
-                Link para cambiar contraseña:
-                {}
-                ============================================================
-                """, to, name, passwordResetUrl);
+    public void sendPasswordResetEmail(String to, String customerName, String resetUrl) {
+        System.out.println();
+        System.out.println("==============================================");
+        System.out.println("[DEV EMAIL] Recuperación de contraseña");
+        System.out.println("Para: " + to);
+        System.out.println("Nombre: " + customerName);
+        System.out.println("Link: " + resetUrl);
+        System.out.println("==============================================");
+        System.out.println();
     }
 }
