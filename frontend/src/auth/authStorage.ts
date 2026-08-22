@@ -1,4 +1,4 @@
-const CUSTOMER_TOKEN_KEY = "gabriela_customer_access_token";
+const CUSTOMER_TOKEN_KEY = "hajuvi_customer_access_token";
 
 export function saveCustomerToken(token: string): void {
   localStorage.setItem(CUSTOMER_TOKEN_KEY, token);

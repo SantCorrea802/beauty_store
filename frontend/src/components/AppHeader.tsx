@@ -69,8 +69,8 @@ export function AppHeader() {
       <div className="app-header__top">
         <Link to="/" className="brand" aria-label="Ir al inicio">
           <img
-            src="/logo-gabriela.png"
-            alt="Gabriela Store"
+            src="/logo-hajuvi.png"
+            alt="Hajuvi"
             className="brand__logo"
             onError={(event) => {
               event.currentTarget.style.display = "none";
