@@ -20,17 +20,20 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtEncoder jwtEncoder;
     private final long expiresMinutes;
+    private final String jwtIssuer;
 
     public AuthService(
             UsuarioAdminRepository usuarioAdminRepository,
             PasswordEncoder passwordEncoder,
             JwtEncoder jwtEncoder,
-            @Value("${app.jwt.expires-minutes}") long expiresMinutes
+            @Value("${app.jwt.expires-minutes}") long expiresMinutes,
+            @Value("${app.jwt.issuer}") String jwtIssuer
     ) {
         this.usuarioAdminRepository = usuarioAdminRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtEncoder = jwtEncoder;
         this.expiresMinutes = expiresMinutes;
+        this.jwtIssuer = jwtIssuer;
     }
 
     public LoginResponse login(LoginRequest request) {
@@ -45,7 +48,7 @@ public class AuthService {
         Instant expiresAt = now.plusSeconds(expiresMinutes * 60);
 
         JwtClaimsSet claims = JwtClaimsSet.builder()
-                .issuer("gabriela-store-backend")
+                .issuer(jwtIssuer)
                 .issuedAt(now)
                 .expiresAt(expiresAt)
                 .subject(admin.getEmail())

@@ -3,6 +3,7 @@ package com.gabriela.store.image;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import com.gabriela.store.common.exception.BadRequestException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -13,8 +14,7 @@ import java.util.Set;
 @Service
 public class CloudinaryStorageService {
 
-
-    // Límite máximo permitido por archivo:5 MB, alineado con la configuración del proyecto.
+    // Límite máximo permitido por archivo: 5 MB.
     private static final long MAX_FILE_SIZE_BYTES = 5L * 1024L * 1024L;
 
     // Tipos MIME permitidos para evitar formatos no soportados o inseguros.
@@ -25,42 +25,108 @@ public class CloudinaryStorageService {
     );
 
     private final Cloudinary cloudinary;
+    private final String productImagesFolder;
 
-    public CloudinaryStorageService(Cloudinary cloudinary) {
+    public CloudinaryStorageService(
+            Cloudinary cloudinary,
+            @Value("${app.cloudinary.product-images-folder}") String productImagesFolder
+    ) {
         this.cloudinary = cloudinary;
+        this.productImagesFolder = normalizeFolder(productImagesFolder);
     }
 
     public CloudinaryUploadResult uploadProductImage(Long productId, MultipartFile file) {
-        // Valida tamaño, contenido y existencia antes de intentar subir.
+        validateProductId(productId);
         validateImage(file);
 
         try {
             Map<?, ?> result = cloudinary.uploader().upload(
                     file.getBytes(),
                     ObjectUtils.asMap(
-                            "folder", "gabriela-store/products/" + productId, // Carpeta dinámica por producto.
-                            "resource_type", "image" // Se fuerza el recurso como imagen.
+                            "folder", buildProductFolder(productId),
+                            "resource_type", "image",
+                            "use_filename", true,
+                            "unique_filename", true,
+                            "overwrite", false
                     )
             );
 
+            Object publicIdValue = result.get("public_id");
+            Object secureUrlValue = result.get("secure_url");
 
-            // secure_url es la URL HTTPS pública que guardas en PostgreSQL para mostrar la imagen.
-            // public_id es el identificador que necesitas para borrar o administrar ese asset después.
-            // Cloudinary describe el public_id como el identificador único del asset y base para construir
-            // URLs y transformaciones.
-            String publicId = (String) result.get("public_id");
-            String secureUrl = (String) result.get("secure_url");
-
-            // Verifica que Cloudinary devuelva los campos necesarios para persistir el resultado.
-            if (publicId == null || secureUrl == null) {
+            if (publicIdValue == null || secureUrlValue == null) {
                 throw new BadRequestException("Cloudinary no devolvió public_id o secure_url.");
             }
 
+            String publicId = publicIdValue.toString();
+            String secureUrl = secureUrlValue.toString();
+
             return new CloudinaryUploadResult(publicId, secureUrl);
-        } catch (IOException e) {
-            throw new BadRequestException("No se pudo subir la imagen a Cloudinary: " + e.getMessage());
-        } catch (RuntimeException e) {
-            throw new BadRequestException("No se pudo subir la imagen a Cloudinary: " + e.getMessage());
+        } catch (IOException exception) {
+            throw new BadRequestException("No se pudo leer la imagen para subirla a Cloudinary.");
+        } catch (BadRequestException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            throw new BadRequestException(
+                    "No se pudo subir la imagen a Cloudinary: " + safeMessage(exception)
+            );
+        }
+    }
+
+    public void deleteProductImage(String publicId) {
+        if (publicId == null || publicId.isBlank()) {
+            return;
+        }
+
+        try {
+            Map<?, ?> result = cloudinary.uploader().destroy(
+                    publicId,
+                    ObjectUtils.asMap(
+                            "resource_type", "image",
+                            "invalidate", true
+                    )
+            );
+
+            Object deleteResult = result.get("result");
+
+            if ("ok".equals(deleteResult) || "not found".equals(deleteResult)) {
+                return;
+            }
+
+            throw new BadRequestException(
+                    "No se pudo eliminar la imagen de Cloudinary. Resultado: " + deleteResult
+            );
+        } catch (IOException exception) {
+            throw new BadRequestException("No se pudo comunicar con Cloudinary para eliminar la imagen.");
+        } catch (BadRequestException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            throw new BadRequestException(
+                    "No se pudo eliminar la imagen de Cloudinary: " + safeMessage(exception)
+            );
+        }
+    }
+
+    private String buildProductFolder(Long productId) {
+        return productImagesFolder + "/" + productId;
+    }
+
+    private String normalizeFolder(String folder) {
+        if (folder == null || folder.isBlank()) {
+            throw new IllegalStateException(
+                    "La carpeta de imágenes de producto en Cloudinary no está configurada."
+            );
+        }
+
+        return folder
+                .trim()
+                .replaceAll("^/+", "")
+                .replaceAll("/+$", "");
+    }
+
+    private void validateProductId(Long productId) {
+        if (productId == null || productId <= 0) {
+            throw new BadRequestException("El id del producto no es válido.");
         }
     }
 
@@ -80,38 +146,10 @@ public class CloudinaryStorageService {
         }
     }
 
-    // Borrar una imagen de Cloudinary usando su public_id, manejando casos donde la imagen no exista o ya haya sido eliminada.
-    public void deleteProductImage(String publicId) {
-        if (publicId == null || publicId.isBlank()) {
-            return;
-        }
-
-
-        // bloque try catch para manejar excepciones de IO y Runtime que puedan ocurrir durante la comunicación con Cloudinary.
-        try {
-            // map con parámetros para indicar que el recurso es una imagen y que se invalide la caché de Cloudinary después de eliminar.
-            Map<?, ?> result = cloudinary.uploader().destroy(
-                    publicId,
-                    ObjectUtils.asMap(
-                            "resource_type", "image",
-                            "invalidate", true
-                    )
-            );
-
-            Object deleteResult = result.get("result");
-
-            if ("ok".equals(deleteResult) || "not found".equals(deleteResult)) {
-                return;
-            }
-
-            throw new BadRequestException(
-                    "No se pudo eliminar la imagen de Cloudinary. Resultado: " + deleteResult
-            );
-
-        } catch (IOException e) {
-            throw new BadRequestException("No se pudo comunicar con Cloudinary para eliminar la imagen.");
-        } catch (RuntimeException e) {
-            throw new BadRequestException("No se pudo eliminar la imagen de Cloudinary: " + e.getMessage());
-        }
+    private String safeMessage(RuntimeException exception) {
+        String message = exception.getMessage();
+        return message == null || message.isBlank()
+                ? "error sin mensaje del proveedor"
+                : message;
     }
 }

@@ -13,33 +13,43 @@ import org.springframework.stereotype.Component;
 @ConditionalOnProperty(name = "app.email.provider", havingValue = "smtp")
 public class SmtpEmailSender implements EmailSender {
 
+    private static final String BUTTON_BACKGROUND = "#744080";
+    private static final String TEXT_COLOR = "#33213d";
+
     private final JavaMailSender mailSender;
     private final String fromEmail;
     private final String fromName;
+    private final String brandName;
 
     public SmtpEmailSender(
             JavaMailSender mailSender,
             @Value("${app.email.from}") String fromEmail,
-            @Value("${app.email.from-name}") String fromName
+            @Value("${app.email.from-name}") String fromName,
+            @Value("${app.brand.name:Hajuvi}") String brandName
     ) {
         this.mailSender = mailSender;
         this.fromEmail = fromEmail;
         this.fromName = fromName;
+        this.brandName = brandName;
     }
 
     @Override
     public void sendVerificationEmail(String to, String customerName, String verificationUrl) {
-        String subject = "Verifica tu correo - Tienda Gabriela";
+        String subject = "Verifica tu correo - " + brandName;
+
+        String safeCustomerName = escapeHtml(customerName);
+        String safeBrandName = escapeHtml(brandName);
+        String safeVerificationUrl = escapeHtml(verificationUrl);
 
         String html = """
-                <div style="font-family: Arial, sans-serif; color: #33213d; line-height: 1.6;">
+                <div style="font-family: Arial, sans-serif; color: %s; line-height: 1.6;">
                   <h2>Verifica tu correo</h2>
                   <p>Hola %s,</p>
-                  <p>Gracias por crear tu cuenta en <strong>Tienda Gabriela</strong>.</p>
+                  <p>Gracias por crear tu cuenta en <strong>%s</strong>.</p>
                   <p>Para activar tu cuenta, haz clic en el siguiente botón:</p>
                   <p>
                     <a href="%s"
-                       style="display:inline-block;padding:12px 18px;background:#744080;color:#ffffff;
+                       style="display:inline-block;padding:12px 18px;background:%s;color:#ffffff;
                               text-decoration:none;border-radius:999px;font-weight:bold;">
                       Verificar correo
                     </a>
@@ -48,24 +58,35 @@ public class SmtpEmailSender implements EmailSender {
                   <p><a href="%s">%s</a></p>
                   <p>Si tú no creaste esta cuenta, puedes ignorar este correo.</p>
                 </div>
-                """.formatted(escapeHtml(customerName), verificationUrl, verificationUrl, verificationUrl);
+                """.formatted(
+                TEXT_COLOR,
+                safeCustomerName,
+                safeBrandName,
+                safeVerificationUrl,
+                BUTTON_BACKGROUND,
+                safeVerificationUrl,
+                safeVerificationUrl
+        );
 
         sendHtmlEmail(to, subject, html);
     }
 
     @Override
     public void sendPasswordResetEmail(String to, String customerName, String resetUrl) {
-        String subject = "Recupera tu contraseña - Tienda Gabriela";
+        String subject = "Recupera tu contraseña - " + brandName;
+
+        String safeCustomerName = escapeHtml(customerName);
+        String safeResetUrl = escapeHtml(resetUrl);
 
         String html = """
-                <div style="font-family: Arial, sans-serif; color: #33213d; line-height: 1.6;">
+                <div style="font-family: Arial, sans-serif; color: %s; line-height: 1.6;">
                   <h2>Recupera tu contraseña</h2>
                   <p>Hola %s,</p>
-                  <p>Recibimos una solicitud para cambiar la contraseña de tu cuenta.</p>
+                  <p>Recibimos una solicitud para cambiar la contraseña de tu cuenta en <strong>%s</strong>.</p>
                   <p>Haz clic en el siguiente botón para definir una nueva contraseña:</p>
                   <p>
                     <a href="%s"
-                       style="display:inline-block;padding:12px 18px;background:#744080;color:#ffffff;
+                       style="display:inline-block;padding:12px 18px;background:%s;color:#ffffff;
                               text-decoration:none;border-radius:999px;font-weight:bold;">
                       Cambiar contraseña
                     </a>
@@ -74,7 +95,15 @@ public class SmtpEmailSender implements EmailSender {
                   <p><a href="%s">%s</a></p>
                   <p>Si tú no solicitaste este cambio, puedes ignorar este correo.</p>
                 </div>
-                """.formatted(escapeHtml(customerName), resetUrl, resetUrl, resetUrl);
+                """.formatted(
+                TEXT_COLOR,
+                safeCustomerName,
+                escapeHtml(brandName),
+                safeResetUrl,
+                BUTTON_BACKGROUND,
+                safeResetUrl,
+                safeResetUrl
+        );
 
         sendHtmlEmail(to, subject, html);
     }

@@ -23,19 +23,22 @@ public class CustomerAuthService {
     private final JwtEncoder jwtEncoder;
     private final long expiresMinutes;
     private final CustomerEmailVerificationService customerEmailVerificationService;
+    private final String jwtIssuer;
 
     public CustomerAuthService(
             ClienteRepository clienteRepository,
             PasswordEncoder passwordEncoder,
             JwtEncoder jwtEncoder,
             CustomerEmailVerificationService customerEmailVerificationService,
-            @Value("${app.jwt.expires-minutes}") long expiresMinutes
+            @Value("${app.jwt.expires-minutes}") long expiresMinutes,
+            @Value("${app.jwt.issuer}") String jwtIssuer
     ) {
         this.clienteRepository = clienteRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtEncoder = jwtEncoder;
         this.customerEmailVerificationService = customerEmailVerificationService;
         this.expiresMinutes = expiresMinutes;
+        this.jwtIssuer = jwtIssuer;
     }
 
     @Transactional
@@ -77,7 +80,7 @@ public class CustomerAuthService {
         Instant expiresAt = now.plusSeconds(expiresMinutes * 60);
 
         JwtClaimsSet claims = JwtClaimsSet.builder()
-                .issuer("gabriela-store-backend")
+                .issuer(jwtIssuer)
                 .issuedAt(now)
                 .expiresAt(expiresAt)
                 .subject(cliente.getEmail())
