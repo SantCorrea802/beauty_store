@@ -16,6 +16,8 @@ import { AdminProtectedRoute } from "./admin/AdminProtectedRoute";
 import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
 import { AdminLoginPage } from "./pages/admin/AdminLoginPage";
 import { AdminProductsPage } from "./pages/admin/AdminProductsPage";
+import { AdminProductCreatePage } from "./pages/admin/AdminProductCreatePage";
+import { AdminProductEditPage } from "./pages/admin/AdminProductEditPage";
 
 function App() {
   return (
@@ -89,6 +91,26 @@ function App() {
             </AdminProtectedRoute>
           }
         />
+
+
+        <Route
+          path="admin/products/new"
+          element={
+            <AdminProtectedRoute>
+              <AdminProductCreatePage />
+            </AdminProtectedRoute>
+          }
+        />
+
+        <Route
+          path="admin/products/:id/edit"
+          element={
+            <AdminProtectedRoute>
+              <AdminProductEditPage />
+            </AdminProtectedRoute>
+          }
+        />
+
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

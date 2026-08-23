@@ -67,3 +67,34 @@ export function deactivateAdminProduct(
     },
   );
 }
+
+export type AdminProductUpsertRequest = {
+  nombre: string;
+  precio: number;
+  descripcion: string | null;
+  marca: string | null;
+  categoriaIds: number[];
+};
+
+export function createAdminProduct(
+  request: AdminProductUpsertRequest,
+): Promise<AdminProductDetail> {
+  return apiRequest<AdminProductDetail>("/api/admin/products", {
+    method: "POST",
+    authenticated: true,
+    authMode: "admin",
+    body: JSON.stringify(request),
+  });
+}
+
+export function updateAdminProduct(
+  productId: number,
+  request: AdminProductUpsertRequest,
+): Promise<AdminProductDetail> {
+  return apiRequest<AdminProductDetail>(`/api/admin/products/${productId}`, {
+    method: "PUT",
+    authenticated: true,
+    authMode: "admin",
+    body: JSON.stringify(request),
+  });
+}
