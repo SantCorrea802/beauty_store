@@ -98,3 +98,75 @@ export function updateAdminProduct(
     body: JSON.stringify(request),
   });
 }
+
+export type AdminProductImage = {
+  id: number;
+  url: string;
+  orden: number;
+  principal: boolean;
+  altText: string | null;
+};
+
+export type AdminProductImageUploadRequest = {
+  file: File;
+  altText: string | null;
+  principal: boolean;
+  orden?: number | null;
+};
+
+export function uploadAdminProductImage(
+  productId: number,
+  request: AdminProductImageUploadRequest,
+): Promise<AdminProductImage> {
+  const formData = new FormData();
+
+  formData.append("file", request.file);
+
+  if (request.altText) {
+    formData.append("altText", request.altText);
+  }
+
+  formData.append("principal", String(request.principal));
+
+  if (request.orden !== undefined && request.orden !== null) {
+    formData.append("orden", String(request.orden));
+  }
+
+  return apiRequest<AdminProductImage>(
+    `/api/admin/products/${productId}/images/upload`,
+    {
+      method: "POST",
+      authenticated: true,
+      authMode: "admin",
+      body: formData,
+    },
+  );
+}
+
+export function deleteAdminProductImage(
+  productId: number,
+  imageId: number,
+): Promise<void> {
+  return apiRequest<void>(
+    `/api/admin/products/${productId}/images/${imageId}`,
+    {
+      method: "DELETE",
+      authenticated: true,
+      authMode: "admin",
+    },
+  );
+}
+
+export function markAdminProductImageAsMain(
+  productId: number,
+  imageId: number,
+): Promise<AdminProductImage> {
+  return apiRequest<AdminProductImage>(
+    `/api/admin/products/${productId}/images/${imageId}/main`,
+    {
+      method: "PATCH",
+      authenticated: true,
+      authMode: "admin",
+    },
+  );
+}

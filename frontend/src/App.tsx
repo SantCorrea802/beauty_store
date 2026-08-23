@@ -18,102 +18,118 @@ import { AdminLoginPage } from "./pages/admin/AdminLoginPage";
 import { AdminProductsPage } from "./pages/admin/AdminProductsPage";
 import { AdminProductCreatePage } from "./pages/admin/AdminProductCreatePage";
 import { AdminProductEditPage } from "./pages/admin/AdminProductEditPage";
+import { AdminProductImagesPage } from "./pages/admin/AdminProductImagesPage";
+import { AppFooter } from "./components/AppFooter";
 
 function App() {
   return (
     <div className="app-shell">
       <AppHeader />
 
-      <Routes>
-        <Route index element={<HomePage />} />
-        <Route path="products/:slug" element={<ProductDetailPage />} />
+      <div className="app-content">
+        <Routes>
+          <Route index element={<HomePage />} />
+          <Route path="products/:slug" element={<ProductDetailPage />} />
 
-        <Route path="register" element={<CustomerRegisterPage />} />
-        <Route path="verify-email" element={<VerifyEmailPage />} />
-        <Route path="login" element={<CustomerLoginPage />} />
-        <Route path="forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="reset-password" element={<ResetPasswordPage />} />
+          <Route path="register" element={<CustomerRegisterPage />} />
+          <Route path="verify-email" element={<VerifyEmailPage />} />
+          <Route path="login" element={<CustomerLoginPage />} />
+          <Route path="forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="reset-password" element={<ResetPasswordPage />} />
 
-        <Route
-          path="me"
-          element={
-            <CustomerProtectedRoute>
-              <CustomerProfilePage />
-            </CustomerProtectedRoute>
-          }
-        />
+          <Route
+            path="me"
+            element={
+              <CustomerProtectedRoute>
+                <CustomerProfilePage />
+              </CustomerProtectedRoute>
+            }
+          />
 
-        <Route
-          path="me/password"
-          element={
-            <CustomerProtectedRoute>
-              <ChangePasswordPage />
-            </CustomerProtectedRoute>
-          }
-        />
+          <Route
+            path="me/password"
+            element={
+              <CustomerProtectedRoute>
+                <ChangePasswordPage />
+              </CustomerProtectedRoute>
+            }
+          />
 
-        <Route
-          path="me/favorites"
-          element={
-            <CustomerProtectedRoute>
-              <CustomerFavoritesPage />
-            </CustomerProtectedRoute>
-          }
-        />
-
-
-
-        <Route
-          path="me/cart"
-          element={
-            <CustomerProtectedRoute>
-              <CustomerCartPage />
-            </CustomerProtectedRoute>
-          }
-        />
-
-        <Route path="admin/login" element={<AdminLoginPage />} />
-
-        <Route
-          path="admin"
-          element={
-            <AdminProtectedRoute>
-              <AdminDashboardPage />
-            </AdminProtectedRoute>
-          }
-        />
-
-        <Route
-          path="admin/products"
-          element={
-            <AdminProtectedRoute>
-              <AdminProductsPage />
-            </AdminProtectedRoute>
-          }
-        />
+          <Route
+            path="me/favorites"
+            element={
+              <CustomerProtectedRoute>
+                <CustomerFavoritesPage />
+              </CustomerProtectedRoute>
+            }
+          />
 
 
-        <Route
-          path="admin/products/new"
-          element={
-            <AdminProtectedRoute>
-              <AdminProductCreatePage />
-            </AdminProtectedRoute>
-          }
-        />
 
-        <Route
-          path="admin/products/:id/edit"
-          element={
-            <AdminProtectedRoute>
-              <AdminProductEditPage />
-            </AdminProtectedRoute>
-          }
-        />
+          <Route
+            path="me/cart"
+            element={
+              <CustomerProtectedRoute>
+                <CustomerCartPage />
+              </CustomerProtectedRoute>
+            }
+          />
+
+          <Route path="admin/login" element={<AdminLoginPage />} />
+
+          <Route
+            path="admin"
+            element={
+              <AdminProtectedRoute>
+                <AdminDashboardPage />
+              </AdminProtectedRoute>
+            }
+          />
+
+          <Route
+            path="admin/products"
+            element={
+              <AdminProtectedRoute>
+                <AdminProductsPage />
+              </AdminProtectedRoute>
+            }
+          />
 
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          <Route
+            path="admin/products/new"
+            element={
+              <AdminProtectedRoute>
+                <AdminProductCreatePage />
+              </AdminProtectedRoute>
+            }
+          />
+
+          <Route
+            path="admin/products/:id/edit"
+            element={
+              <AdminProtectedRoute>
+                <AdminProductEditPage />
+              </AdminProtectedRoute>
+            }
+          />
+
+          <Route
+            path="admin/products/:id/images"
+            element={
+              <AdminProtectedRoute>
+                <AdminProductImagesPage />
+              </AdminProtectedRoute>
+            }
+          />
+
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+        </div>
+
+        <AppFooter />
+
     </div>
   );
 }

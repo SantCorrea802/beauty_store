@@ -4,7 +4,7 @@ import { addCartItem } from "../api/cartApi";
 import { addFavorite } from "../api/favoritesApi";
 import { getProductBySlug } from "../api/productsApi";
 import { getCustomerToken } from "../auth/authStorage";
-import type { Product } from "../types/product";
+import type { ProductDetail } from "../types/product";
 
 const currencyFormatter = new Intl.NumberFormat("es-CO", {
   style: "currency",
@@ -16,7 +16,8 @@ export function ProductDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
 
-  const [product, setProduct] = useState<Product | null>(null);
+  const [product, setProduct] = useState<ProductDetail | null>(null);
+  const [selectedImageId, setSelectedImageId] = useState<number | null>(null);
   const [quantity, setQuantity] = useState(1);
 
   const [isLoading, setIsLoading] = useState(true);
@@ -39,11 +40,13 @@ export function ProductDetailPage() {
       try {
         setIsLoading(true);
         setErrorMessage(null);
+        setFeedbackMessage(null);
 
         const productFromApi = await getProductBySlug(slug);
 
         if (!ignore) {
           setProduct(productFromApi);
+          setSelectedImageId(null);
         }
       } catch (error) {
         if (!ignore) {
@@ -164,6 +167,17 @@ export function ProductDetailPage() {
     );
   }
 
+  const orderedImages = [...product.imagenes].sort(
+    (a, b) => a.orden - b.orden,
+  );
+
+  const defaultMainImage =
+    orderedImages.find((image) => image.principal) ?? orderedImages[0] ?? null;
+
+  const selectedImage =
+    orderedImages.find((image) => image.id === selectedImageId) ??
+    defaultMainImage;
+
   return (
     <main className="page">
       <Link className="back-link" to="/">
@@ -172,15 +186,39 @@ export function ProductDetailPage() {
 
       <section className="product-detail">
         <div className="product-detail__media">
-          {product.imagenPrincipalUrl ? (
+          {selectedImage ? (
             <img
               className="product-detail__image"
-              src={product.imagenPrincipalUrl}
-              alt={product.nombre}
+              src={selectedImage.url}
+              alt={selectedImage.altText ?? product.nombre}
             />
           ) : (
             <div className="product-detail__placeholder">Sin imagen</div>
           )}
+
+          {orderedImages.length > 1 ? (
+            <div className="product-detail__thumbnails">
+              {orderedImages.map((image) => (
+                <button
+                  key={image.id}
+                  className={
+                    image.id === selectedImage?.id
+                      ? "product-detail__thumbnail-button product-detail__thumbnail-button--active"
+                      : "product-detail__thumbnail-button"
+                  }
+                  type="button"
+                  onClick={() => setSelectedImageId(image.id)}
+                  aria-label={`Ver imagen ${image.orden + 1} de ${product.nombre}`}
+                >
+                  <img
+                    className="product-detail__thumbnail"
+                    src={image.url}
+                    alt={image.altText ?? product.nombre}
+                  />
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         <div className="product-detail__info">
@@ -200,7 +238,7 @@ export function ProductDetailPage() {
 
           <div className="product-detail__description">
             <h2>Descripción</h2>
-            <p>{product.descripcion}</p>
+            <p>{product.descripcion || "Este producto no tiene descripción."}</p>
           </div>
 
           <div className="quantity-control">
@@ -210,9 +248,15 @@ export function ProductDetailPage() {
               type="number"
               min={1}
               value={quantity}
-              onChange={(event) =>
-                setQuantity(Math.max(1, Number(event.target.value)))
-              }
+              onChange={(event) => {
+                const nextQuantity = Number(event.target.value);
+
+                setQuantity(
+                  Number.isFinite(nextQuantity) && nextQuantity > 0
+                    ? nextQuantity
+                    : 1,
+                );
+              }}
             />
           </div>
 

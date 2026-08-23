@@ -209,6 +209,12 @@ export function AdminProductsPage() {
                   >
                     Editar
                   </Link>
+                  <Link
+                    className="secondary-button secondary-button--small"
+                    to={`/admin/products/${product.id}/images`}
+                  >
+                    Imágenes
+                  </Link>
 
                   <button
                     className="secondary-button secondary-button--small"

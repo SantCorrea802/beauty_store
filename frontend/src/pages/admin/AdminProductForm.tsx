@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { FormEvent } from "react";
+import type { FormEvent, ReactNode } from "react";
 import type { AdminCategory } from "../../api/adminCategoriesApi";
 import type { AdminProductUpsertRequest } from "../../api/adminProductsApi";
 
@@ -20,6 +20,7 @@ type AdminProductFormProps = {
   initialValues: AdminProductFormValues;
   isSubmitting: boolean;
   errorMessage: string | null;
+  successMessage?: ReactNode;
   onCancel: () => void;
   onSubmit: (request: AdminProductUpsertRequest) => Promise<void>;
 };
@@ -33,6 +34,7 @@ export function AdminProductForm({
   initialValues,
   isSubmitting,
   errorMessage,
+  successMessage,
   onCancel,
   onSubmit,
 }: AdminProductFormProps) {
@@ -193,6 +195,11 @@ export function AdminProductForm({
               </div>
             )}
           </fieldset>
+          {successMessage ? (
+            <div className="form-message form-message--success">
+              {successMessage}
+            </div>
+          ) : null}
 
           {validationMessage ? (
             <div className="form-message form-message--error">
