@@ -1,3 +1,280 @@
+# Frontend Hajuvi
+
+Aplicación web de Hajuvi construida con Vite, React, TypeScript y React Router.
+
+Consume la API REST del backend Hajuvi y cubre catálogo público, cuentas de cliente, verificación de email, recuperación de contraseña, favoritos, carrito y pedido por WhatsApp.
+
+## Estado
+
+Implementado:
+
+```text
+- Catálogo público.
+- Filtro/búsqueda de productos en interfaz.
+- Detalle de producto por slug.
+- Registro de cliente.
+- Verificación de email por token.
+- Login de cliente.
+- Perfil de cliente protegido.
+- Cambio de contraseña.
+- Recuperación/reset de contraseña.
+- Favoritos.
+- Carrito.
+- Pedido por WhatsApp.
+- Header compartido.
+- Logo Hajuvi.
+- Rewrite de Vercel para rutas SPA.
+```
+
+Pendiente principal:
+
+```text
+- Login admin frontend.
+- Dashboard admin.
+- Gestión admin de productos, imágenes, categorías y usuarios.
+- Mejoras de UX, accesibilidad y validación visual.
+- Tests frontend.
+```
+
+## Stack
+
+```text
+Vite
+React
+TypeScript
+React Router DOM
+Fetch API
+CSS global
+```
+
+No se usa todavía:
+
+```text
+Redux/Zustand
+React Query
+Axios
+Tailwind
+UI library
+```
+
+Esto mantiene baja la complejidad mientras el producto sigue en etapa inicial.
+
+## Estructura relevante
+
+```text
+frontend/
+  public/
+    logo-hajuvi.png
+  src/
+    api/
+      authApi.ts
+      cartApi.ts
+      categoriesApi.ts
+      favoritesApi.ts
+      http.ts
+      productsApi.ts
+    auth/
+      authStorage.ts
+      CustomerProtectedRoute.tsx
+    components/
+      AppHeader.tsx
+      ProductCard.tsx
+    pages/
+      HomePage.tsx
+      ProductDetailPage.tsx
+      auth/
+      customer/
+    types/
+    App.tsx
+    main.tsx
+    index.css
+  vercel.json
+```
+
+## Ejecución local
+
+```bash
+cd frontend
+copy .env.example .env
+npm install
+npm run dev
+```
+
+URL local:
+
+```text
+http://localhost:5173
+```
+
+## Build
+
+```bash
+npm run build
+```
+
+Preview local del build:
+
+```bash
+npm run preview
+```
+
+## Variables de entorno
+
+Archivo local:
+
+```text
+frontend/.env
+```
+
+Ejemplo:
+
+```env
+VITE_API_BASE_URL=http://localhost:8080
+VITE_WHATSAPP_PUBLIC_URL=https://wa.me/<numero>
+VITE_INSTAGRAM_URL=https://www.instagram.com/<usuario>
+```
+
+Producción:
+
+```env
+VITE_API_BASE_URL=https://api.hajuvi.com
+```
+
+Notas:
+
+```text
+- Solo usar VITE_ para variables expuestas al navegador.
+- No poner secretos en frontend.
+- Si se cambia .env, reiniciar npm run dev.
+```
+
+## Rutas
+
+```text
+/                    Home/catálogo
+/products/:slug      Detalle de producto
+/register            Registro cliente
+/verify-email        Verificación de email por token
+/login               Login cliente
+/forgot-password     Solicitar recuperación
+/reset-password      Resetear contraseña por token
+/me                  Perfil cliente protegido
+/me/password         Cambio de contraseña
+/me/favorites        Favoritos
+/me/cart             Carrito
+```
+
+## Cliente HTTP
+
+`src/api/http.ts` centraliza:
+
+```text
+- Base URL desde VITE_API_BASE_URL.
+- Headers Accept/Content-Type.
+- Bearer token de cliente cuando authenticated=true.
+- Conversión de errores HTTP a ApiError.
+```
+
+El token de cliente se guarda en localStorage con key:
+
+```text
+hajuvi_customer_access_token
+```
+
+Cuando se implemente admin, debe usarse una key separada, por ejemplo:
+
+```text
+hajuvi_admin_access_token
+```
+
+No mezclar sesión cliente y sesión admin.
+
+## Deploy en Vercel
+
+Configuración esperada:
+
+```text
+Root Directory: frontend
+Build Command: npm run build
+Output Directory: dist
+Production Branch: main, cuando main sea la rama estable
+```
+
+Variable de producción:
+
+```env
+VITE_API_BASE_URL=https://api.hajuvi.com
+```
+
+`frontend/vercel.json` debe existir para que React Router funcione al abrir rutas directamente:
+
+```json
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
+```
+
+Sin ese rewrite, rutas como `/verify-email` o `/reset-password` pueden devolver 404 de Vercel al abrirlas directamente.
+
+## Validación mínima
+
+```text
+1. npm run build pasa.
+2. / carga catálogo.
+3. /products/:slug abre detalle.
+4. Registro envía correo.
+5. /verify-email?token=... verifica cuenta.
+6. Login cliente guarda sesión.
+7. /me carga perfil.
+8. Favoritos funcionan.
+9. Carrito funciona.
+10. Pedido WhatsApp abre URL válida.
+11. /forgot-password y /reset-password funcionan.
+```
+
+## Errores comunes
+
+### `VITE_API_BASE_URL` no definida
+
+Crear/actualizar `frontend/.env` y reiniciar Vite.
+
+### `Failed to fetch`
+
+Causas probables:
+
+```text
+- Backend caído o dormido.
+- VITE_API_BASE_URL incorrecta.
+- CORS no permite el origen actual.
+```
+
+### 404 en rutas internas en Vercel
+
+Revisar `frontend/vercel.json` y redeploy.
+
+### Login funciona en Postman pero no en navegador
+
+Revisar CORS y que el frontend apunte a `https://api.hajuvi.com`, no a una URL vieja.
+
+## Próxima etapa
+
+Crear frontend admin:
+
+```text
+/admin/login
+/admin
+/admin/products
+/admin/products/new
+/admin/products/:id/edit
+/admin/categories
+/admin/users
+```
+
 # Frontend - Tienda Gabriela
 
 Frontend web para la tienda Gabriela. Está construido con **Vite + React + TypeScript** y consume el backend REST desplegado en Render.
@@ -557,4 +834,3 @@ Siguiente etapa recomendada:
 5. Crear layout admin protegido.
 6. Construir panel admin por módulos.
 ```
-

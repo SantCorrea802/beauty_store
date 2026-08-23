@@ -1,7 +1,390 @@
+# Backend Hajuvi
+
+API REST de Hajuvi para catálogo, cuentas de cliente, favoritos, carrito, pedido por WhatsApp y administración de productos/categorías/usuarios.
+
+## Estado
+
+Implementado:
+
+```text
+- PostgreSQL con Flyway.
+- Entidades JPA y repositories Spring Data.
+- Catálogo público de categorías y productos.
+- Login admin con JWT.
+- Protección de /api/admin/** con rol ADMIN.
+- Registro/login de cliente con JWT.
+- Verificación de email de cliente.
+- Recuperación y cambio de contraseña.
+- Favoritos de cliente.
+- Carrito de cliente.
+- Pedido por WhatsApp.
+- Gestión admin de categorías.
+- Gestión admin de productos.
+- Gestión de imágenes por URL y upload Cloudinary.
+- Gestión básica de usuarios admin.
+- Auditoría básica de productos.
+- Envío de correos por dev console, SMTP o Resend API.
+```
+
+Pendiente relevante:
+
+```text
+- Tests automatizados suficientes.
+- Endurecimiento final de seguridad.
+- Observabilidad mínima de producción.
+- Frontend admin.
+```
+
+## Stack
+
+```text
+Java 17
+Spring Boot 3.5.x
+Maven
+Spring Web
+Spring Security
+OAuth2 Resource Server JWT
+Spring Data JPA
+PostgreSQL
+Flyway
+Lombok
+Cloudinary
+JavaMailSender
+Resend API vía HTTP
+Docker Compose para PostgreSQL local
+```
+
+## Arquitectura interna
+
+```text
+Controller -> Service -> Repository -> PostgreSQL
+                      -> Cloudinary
+                      -> Resend/SMTP/dev console
+```
+
+Responsabilidades:
+
+```text
+Controller: endpoints HTTP, validación DTO, serialización JSON/multipart.
+Service: reglas de negocio, seguridad contextual, hashes, tokens, auditoría.
+Repository: persistencia JPA.
+DTO: contrato público de API.
+Flyway: versionado de esquema.
+Spring Security: JWT stateless y autorización por roles.
+```
+
+## Ejecución local
+
+### 1. Crear variables locales
+
+```powershell
+cd backend
+copy .env.example .env.local
+```
+
+Editar `backend/.env.local` con credenciales locales.
+
+### 2. Levantar PostgreSQL local
+
+```bash
+docker compose up -d
+```
+
+Verificar:
+
+```bash
+docker compose ps
+```
+
+### 3. Ejecutar backend
+
+Windows recomendado:
+
+```powershell
+.\scripts\run-local.ps1
+```
+
+Alternativa manual:
+
+```bash
+./mvnw spring-boot:run
+```
+
+Base URL:
+
+```text
+http://localhost:8080
+```
+
+## Build
+
+```bash
+./mvnw clean package
+```
+
+En Windows:
+
+```powershell
+.\mvnw.cmd clean package
+```
+
+## Configuración
+
+El backend lee `backend/src/main/resources/application.properties`, que a su vez usa variables de entorno.
+
+Variables esenciales:
+
+```text
+DB_URL
+DB_USERNAME
+DB_PASSWORD
+JWT_SECRET
+JWT_EXPIRES_MINUTES
+JWT_ISSUER
+CORS_ALLOWED_ORIGINS
+CLOUDINARY_CLOUD_NAME
+CLOUDINARY_API_KEY
+CLOUDINARY_API_SECRET
+CLOUDINARY_PRODUCT_IMAGES_FOLDER
+BUSINESS_WHATSAPP_NUMBER
+EMAIL_PROVIDER
+EMAIL_FROM
+EMAIL_FROM_NAME
+CUSTOMER_EMAIL_VERIFICATION_URL
+CUSTOMER_PASSWORD_RESET_URL
+```
+
+Producción con Resend API:
+
+```text
+EMAIL_PROVIDER=resend-api
+RESEND_API_KEY=<secreto>
+RESEND_API_URL=https://api.resend.com/emails
+EMAIL_FROM=no-reply@hajuvi.com
+EMAIL_FROM_NAME=Hajuvi
+```
+
+Desarrollo local sin correos reales:
+
+```text
+EMAIL_PROVIDER=dev
+```
+
+## CORS
+
+La variable debe contener los orígenes exactos separados por coma:
+
+```env
+CORS_ALLOWED_ORIGINS=http://localhost:5173,https://hajuvi.com,https://www.hajuvi.com,https://hajuvi.vercel.app
+```
+
+Cuando producción esté estable, se puede endurecer a:
+
+```env
+CORS_ALLOWED_ORIGINS=https://hajuvi.com,https://www.hajuvi.com
+```
+
+## Seguridad
+
+```text
+- API stateless con JWT.
+- /api/admin/** requiere rol ADMIN.
+- /api/me/** requiere rol CUSTOMER.
+- Contraseñas con BCrypt.
+- CSRF deshabilitado porque no se usan cookies de sesión.
+- CORS explícito por origen.
+```
+
+No almacenar ni subir:
+
+```text
+JWT_SECRET
+DB_PASSWORD
+CLOUDINARY_API_SECRET
+RESEND_API_KEY
+SMTP_PASSWORD
+.env
+.env.local
+```
+
+## Bootstrap del primer administrador
+
+El primer admin puede requerir creación manual con SQL porque todavía no existe un admin autenticado que cree otros usuarios.
+
+La contraseña debe guardarse como BCrypt en `usuario_admin.pass_hash`.
+
+Ejemplo conceptual:
+
+```sql
+INSERT INTO usuario_admin (email, nombre, pass_hash, rol, activo)
+VALUES ('admin@hajuvi.com', 'Admin Hajuvi', '<HASH_BCRYPT>', 'ADMIN', true)
+ON CONFLICT (email) DO NOTHING;
+```
+
+Para cambiar una contraseña:
+
+```sql
+UPDATE usuario_admin
+SET pass_hash = '<HASH_BCRYPT>'
+WHERE email = 'admin@hajuvi.com';
+```
+
+Verificar admins:
+
+```sql
+SELECT id_usuario, email, nombre, rol, activo, fecha_creacion, fecha_ultima_actualizacion
+FROM usuario_admin
+ORDER BY id_usuario;
+```
+
+## Endpoints
+
+### Públicos
+
+```http
+GET  /api/categories
+GET  /api/products
+GET  /api/products?category={categorySlug}
+GET  /api/products/{slug}
+POST /api/auth/login
+POST /api/auth/customers/register
+POST /api/auth/customers/login
+POST /api/auth/customers/verify-email
+POST /api/auth/customers/resend-verification
+POST /api/auth/customers/forgot-password
+POST /api/auth/customers/reset-password
+```
+
+### Cliente autenticado
+
+```http
+GET    /api/me
+PATCH  /api/me/password
+GET    /api/me/favorites
+POST   /api/me/favorites/{productId}
+DELETE /api/me/favorites/{productId}
+GET    /api/me/cart
+POST   /api/me/cart/items
+PATCH  /api/me/cart/items/{itemId}
+DELETE /api/me/cart/items/{itemId}
+DELETE /api/me/cart
+POST   /api/me/cart/whatsapp-order
+```
+
+### Admin autenticado
+
+```http
+GET    /api/admin/users
+POST   /api/admin/users
+PATCH  /api/admin/users/{id}/activate
+PATCH  /api/admin/users/{id}/deactivate
+GET    /api/admin/categories
+POST   /api/admin/categories
+PUT    /api/admin/categories/{id}
+DELETE /api/admin/categories/{id}
+POST   /api/admin/products
+PUT    /api/admin/products/{id}
+PATCH  /api/admin/products/{id}/activate
+PATCH  /api/admin/products/{id}/deactivate
+POST   /api/admin/products/{id}/images
+POST   /api/admin/products/{id}/images/upload
+PATCH  /api/admin/products/{id}/images/{imageId}/main
+DELETE /api/admin/products/{id}/images/{imageId}
+```
+
+## Contratos básicos
+
+### Login admin
+
+```http
+POST /api/auth/login
+Content-Type: application/json
+```
+
+```json
+{
+  "email": "admin@hajuvi.com",
+  "password": "********"
+}
+```
+
+Respuesta:
+
+```json
+{
+  "accessToken": "...",
+  "tokenType": "Bearer",
+  "expiresInSeconds": 28800
+}
+```
+
+### Crear producto
+
+```http
+POST /api/admin/products
+Authorization: Bearer <admin_token>
+Content-Type: application/json
+```
+
+```json
+{
+  "nombre": "Producto ejemplo",
+  "precio": 25000,
+  "descripcion": "Descripción",
+  "marca": "Marca",
+  "categoriaIds": [1]
+}
+```
+
+### Upload imagen
+
+```http
+POST /api/admin/products/{id}/images/upload
+Authorization: Bearer <admin_token>
+Content-Type: multipart/form-data
+```
+
+Campos esperados: archivo de imagen y metadatos según el controller/servicio actual.
+
+## Migraciones
+
+Flyway ejecuta:
+
+```text
+V1__init_schema.sql
+V2__add_customer_accounts.sql
+V3__add_customer_favorites.sql
+V4__add_customer_cart.sql
+V5__add_customer_email_verification.sql
+V6__add_customer_password_reset.sql
+```
+
+Hibernate usa:
+
+```properties
+spring.jpa.hibernate.ddl-auto=validate
+```
+
+Por tanto, el esquema se cambia con migraciones, no con auto-DDL de Hibernate.
+
+## Validación mínima
+
+```text
+1. mvnw clean package pasa.
+2. GET /api/products responde 200.
+3. Registro cliente envía correo.
+4. Verificación de email funciona.
+5. Login cliente devuelve JWT CUSTOMER.
+6. Login admin devuelve JWT ADMIN.
+7. /api/admin/** rechaza token ausente o token CUSTOMER.
+8. Upload a Cloudinary guarda metadata y URL.
+9. Pedido WhatsApp devuelve URL válida.
+```
+
 # Backend - Tienda Gabriela
 
 Backend REST para una tienda de productos de belleza, maquillaje, cuidado capilar e higiene personal.
- 
+
 Este backend cubre catálogo público, administración de productos, categorías, usuarios administradores, imágenes con Cloudinary, autenticación de administradores con JWT y auditoría básica de acciones administrativas.
 
 ---

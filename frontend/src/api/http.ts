@@ -1,3 +1,4 @@
+import { getAdminToken } from "../admin/adminAuthStorage";
 import { getCustomerToken } from "../auth/authStorage";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -18,15 +19,23 @@ export class ApiError extends Error {
   }
 }
 
+type AuthMode = "customer" | "admin";
+
 type ApiRequestOptions = RequestInit & {
   authenticated?: boolean;
+  authMode?: AuthMode;
 };
 
 export async function apiRequest<T>(
   path: string,
   options: ApiRequestOptions = {},
 ): Promise<T> {
-  const { authenticated = false, headers, ...fetchOptions } = options;
+  const {
+    authenticated = false,
+    authMode = "customer",
+    headers,
+    ...fetchOptions
+  } = options;
 
   const requestHeaders = new Headers(headers);
 
@@ -41,10 +50,16 @@ export async function apiRequest<T>(
   }
 
   if (authenticated) {
-    const token = getCustomerToken();
+    const token =
+      authMode === "admin" ? getAdminToken() : getCustomerToken();
 
     if (!token) {
-      throw new ApiError("No hay sesión de cliente activa.", 401);
+      throw new ApiError(
+        authMode === "admin"
+          ? "No hay sesión de administrador activa."
+          : "No hay sesión de cliente activa.",
+        401,
+      );
     }
 
     requestHeaders.set("Authorization", `Bearer ${token}`);

@@ -12,6 +12,9 @@ import { CustomerFavoritesPage } from "./pages/customer/CustomerFavoritesPage";
 import { CustomerProfilePage } from "./pages/customer/CustomerProfilePage";
 import { HomePage } from "./pages/HomePage";
 import { ProductDetailPage } from "./pages/ProductDetailPage";
+import { AdminProtectedRoute } from "./admin/AdminProtectedRoute";
+import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage";
+import { AdminLoginPage } from "./pages/admin/AdminLoginPage";
 
 function App() {
   return (
@@ -55,12 +58,25 @@ function App() {
           }
         />
 
+
+
         <Route
           path="me/cart"
           element={
             <CustomerProtectedRoute>
               <CustomerCartPage />
             </CustomerProtectedRoute>
+          }
+        />
+
+        <Route path="admin/login" element={<AdminLoginPage />} />
+
+        <Route
+          path="admin"
+          element={
+            <AdminProtectedRoute>
+              <AdminDashboardPage />
+            </AdminProtectedRoute>
           }
         />
 
