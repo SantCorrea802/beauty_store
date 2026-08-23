@@ -34,4 +34,20 @@ public interface ProductoRepository extends JpaRepository<Producto, Long> {
            """)
     List<Producto> findActiveByCategorySlug(@Param("categorySlug") String categorySlug);
 
+    @Query("""
+       SELECT p
+       FROM Producto p
+       ORDER BY p.idProducto DESC
+       """)
+    List<Producto> findAllForAdmin();
+
+    @Query("""
+       SELECT DISTINCT p
+       FROM Producto p
+       LEFT JOIN FETCH p.categorias pc
+       LEFT JOIN FETCH pc.categoria
+       WHERE p.idProducto = :idProducto
+       """)
+    Optional<Producto> findByIdWithCategories(@Param("idProducto") Long idProducto);
+
 }

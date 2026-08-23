@@ -14,6 +14,9 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.gabriela.store.product.dto.ProductResponse;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/products")
@@ -26,6 +29,15 @@ public class ProductoAdminController {
         this.imagenProductoService = imagenProductoService;
     }
 
+    @GetMapping
+    public List<ProductResponse> findAll() {
+        return productoService.findAllForAdmin();
+    }
+
+    @GetMapping("/{id}")
+    public ProductDetailResponse findById(@PathVariable Long id) {
+        return productoService.findByIdForAdmin(id);
+    }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

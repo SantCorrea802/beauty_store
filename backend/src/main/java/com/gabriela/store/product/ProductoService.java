@@ -397,4 +397,20 @@ public class ProductoService {
 
         return toDetailResponse(savedProduct, relaciones);
     }
+
+    @Transactional(readOnly = true)
+    public List<ProductResponse> findAllForAdmin() {
+        return productoRepository.findAllForAdmin()
+                .stream()
+                .map(this::toSummaryResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ProductDetailResponse findByIdForAdmin(Long idProducto) {
+        Producto producto = productoRepository.findByIdWithCategories(idProducto)
+                .orElseThrow(() -> new NotFoundException("Producto no encontrado con id: " + idProducto));
+
+        return toDetailResponse(producto);
+    }
 }
