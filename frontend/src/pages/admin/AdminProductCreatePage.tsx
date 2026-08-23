@@ -1,17 +1,20 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   getAdminCategories,
   type AdminCategory,
 } from "../../api/adminCategoriesApi";
 import {
   createAdminProduct,
+  type AdminProductDetail,
   type AdminProductUpsertRequest,
 } from "../../api/adminProductsApi";
 import {
   AdminProductForm,
   type AdminProductFormValues,
 } from "./AdminProductForm";
+
+import { AdminProductImagesManager } from "./AdminProductImagesManager";
 
 const EMPTY_VALUES: AdminProductFormValues = {
   nombre: "",
@@ -25,6 +28,10 @@ export function AdminProductCreatePage() {
   const navigate = useNavigate();
 
   const [categories, setCategories] = useState<AdminCategory[]>([]);
+  const [createdProduct, setCreatedProduct] =
+    useState<AdminProductDetail | null>(null);
+  const [formVersion, setFormVersion] = useState(0);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -69,10 +76,12 @@ export function AdminProductCreatePage() {
     try {
       setIsSubmitting(true);
       setErrorMessage(null);
+      setCreatedProduct(null);
 
-      const createdProduct = await createAdminProduct(request);
+      const product = await createAdminProduct(request);
 
-      navigate(`/admin/products/${createdProduct.id}/edit`, { replace: true });
+      setCreatedProduct(product);
+      setFormVersion((current) => current + 1);
     } catch (error) {
       const message =
         error instanceof Error
@@ -94,17 +103,36 @@ export function AdminProductCreatePage() {
   }
 
   return (
-    <AdminProductForm
-      eyebrow="Catálogo interno"
-      title="Crear producto"
-      description="Crea un producto nuevo. El slug público se genera automáticamente a partir del nombre."
-      submitLabel="Crear producto"
-      categories={categories}
-      initialValues={EMPTY_VALUES}
-      isSubmitting={isSubmitting}
-      errorMessage={errorMessage}
-      onCancel={() => navigate("/admin/products")}
-      onSubmit={handleSubmit}
-    />
+    <>
+        <AdminProductForm
+        key={formVersion}
+        eyebrow="Catálogo interno"
+        title="Crear producto"
+        description="Crea un producto nuevo. El slug público se genera automáticamente a partir del nombre."
+        submitLabel="Crear producto"
+        categories={categories}
+        initialValues={EMPTY_VALUES}
+        isSubmitting={isSubmitting}
+        errorMessage={errorMessage}
+        successMessage={
+            createdProduct ? (
+            <span>
+                Producto creado exitosamente. Ahora puedes agregar imágenes abajo.{" "}
+                <Link to={`/admin/products/${createdProduct.id}/edit`}>
+                Editar producto
+                </Link>
+            </span>
+            ) : null
+        }
+        onCancel={() => navigate("/admin/products")}
+        onSubmit={handleSubmit}
+        />
+
+        {createdProduct ? (
+        <main className="page admin-page">
+            <AdminProductImagesManager productId={createdProduct.id} compact />
+        </main>
+        ) : null}
+    </>
   );
 }
