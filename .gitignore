@@ -86,3 +86,9 @@ desktop.ini
 Planificación_Técnica_Tienda_en_Línea_de_Belleza.pdf
 /Doc
 /scripts_sql
+
+
+backups/
+*.dump
+*.backup
+*.sql.gz
