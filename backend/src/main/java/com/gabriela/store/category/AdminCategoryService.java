@@ -9,6 +9,9 @@ import com.gabriela.store.common.text.SlugUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.gabriela.store.product.ProductoCategoriaRepository;
+import com.gabriela.store.audit.AdminAuditAction;
+import com.gabriela.store.audit.AdminAuditEntityType;
+import com.gabriela.store.audit.AdminAuditService;
 
 import java.util.List;
 
@@ -17,13 +20,16 @@ public class AdminCategoryService {
 
     private final CategoriaRepository categoriaRepository;
     private final ProductoCategoriaRepository productoCategoriaRepository;
+    private final AdminAuditService adminAuditService;
 
     public AdminCategoryService(
             CategoriaRepository categoriaRepository,
-            ProductoCategoriaRepository productoCategoriaRepository
+            ProductoCategoriaRepository productoCategoriaRepository,
+            AdminAuditService adminAuditService
     ) {
         this.categoriaRepository = categoriaRepository;
         this.productoCategoriaRepository = productoCategoriaRepository;
+        this.adminAuditService = adminAuditService;
     }
 
     // Aqui se podrían agregar métodos adicionales para funcionalidades específicas del administrador, como activar/desactivar categorías, etc.
@@ -56,6 +62,13 @@ public class AdminCategoryService {
 
         Categoria savedCategory = categoriaRepository.save(categoria);
 
+        adminAuditService.record(
+                AdminAuditAction.CATEGORY_CREATED,
+                AdminAuditEntityType.CATEGORY,
+                savedCategory.getIdCategoria(),
+                "Creó la categoría \"" + savedCategory.getNombre() + "\"."
+        );
+
         return toResponse(savedCategory);
     }
 
@@ -63,6 +76,8 @@ public class AdminCategoryService {
     public CategoryResponse update(Long idCategoria, CategoryUpdateRequest request) {
         Categoria categoria = categoriaRepository.findById(idCategoria)
                 .orElseThrow(() -> new NotFoundException("Categoría no encontrada con id: " + idCategoria));
+
+        String previousName = categoria.getNombre();
 
         String nombre = normalizeName(request.nombre());
 
@@ -75,6 +90,13 @@ public class AdminCategoryService {
         categoria.actualizarDatos(nombre, slug);
 
         Categoria savedCategory = categoriaRepository.save(categoria);
+
+        adminAuditService.record(
+                AdminAuditAction.CATEGORY_UPDATED,
+                AdminAuditEntityType.CATEGORY,
+                savedCategory.getIdCategoria(),
+                "Actualizó la categoría \"" + previousName + "\" a \"" + savedCategory.getNombre() + "\"."
+        );
 
         return toResponse(savedCategory);
     }
@@ -92,6 +114,13 @@ public class AdminCategoryService {
                             "Primero reasigna o elimina la categoría de esos productos."
             );
         }
+
+        adminAuditService.record(
+                AdminAuditAction.CATEGORY_DELETED,
+                AdminAuditEntityType.CATEGORY,
+                categoria.getIdCategoria(),
+                "Eliminó la categoría \"" + categoria.getNombre() + "\"."
+        );
 
         categoriaRepository.delete(categoria);
     }

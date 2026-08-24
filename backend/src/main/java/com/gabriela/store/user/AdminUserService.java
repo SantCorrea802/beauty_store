@@ -1,6 +1,9 @@
 package com.gabriela.store.user;
 
-
+import com.gabriela.store.audit.AdminAuditAction;
+import com.gabriela.store.audit.AdminAuditEntityType;
+import com.gabriela.store.audit.AdminAuditService;
+import com.gabriela.store.auth.CurrentAdminService;
 import com.gabriela.store.common.exception.BadRequestException;
 import com.gabriela.store.common.exception.NotFoundException;
 import com.gabriela.store.user.dto.AdminUserCreateRequest;
@@ -16,13 +19,19 @@ public class AdminUserService {
 
     private final UsuarioAdminRepository usuarioAdminRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AdminAuditService adminAuditService;
+    private final CurrentAdminService currentAdminService;
 
     public AdminUserService(
             UsuarioAdminRepository usuarioAdminRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            AdminAuditService adminAuditService,
+            CurrentAdminService currentAdminService
     ) {
         this.usuarioAdminRepository = usuarioAdminRepository;
         this.passwordEncoder = passwordEncoder;
+        this.adminAuditService = adminAuditService;
+        this.currentAdminService = currentAdminService;
     }
 
     @Transactional(readOnly = true)
@@ -51,6 +60,13 @@ public class AdminUserService {
 
         UsuarioAdmin savedUser = usuarioAdminRepository.save(usuario);
 
+        adminAuditService.record(
+                AdminAuditAction.ADMIN_USER_CREATED,
+                AdminAuditEntityType.ADMIN_USER,
+                savedUser.getIdUsuario(),
+                "Creó el administrador \"" + savedUser.getEmail() + "\"."
+        );
+
         return toResponse(savedUser);
     }
 
@@ -59,21 +75,49 @@ public class AdminUserService {
         UsuarioAdmin usuario = usuarioAdminRepository.findById(idUsuario)
                 .orElseThrow(() -> new NotFoundException("Usuario admin no encontrado con id: " + idUsuario));
 
-        usuario.activar();
+        boolean changed = usuario.activar();
 
         UsuarioAdmin savedUser = usuarioAdminRepository.save(usuario);
+
+        if (changed) {
+            adminAuditService.record(
+                    AdminAuditAction.ADMIN_USER_ACTIVATED,
+                    AdminAuditEntityType.ADMIN_USER,
+                    savedUser.getIdUsuario(),
+                    "Activó el administrador \"" + savedUser.getEmail() + "\"."
+            );
+        }
 
         return toResponse(savedUser);
     }
 
     @Transactional
     public AdminUserResponse deactivate(Long idUsuario) {
+        UsuarioAdmin currentAdmin = currentAdminService.getCurrentAdmin();
+
+        if (currentAdmin.getIdUsuario().equals(idUsuario)) {
+            throw new BadRequestException("No puedes desactivar tu propia cuenta admin.");
+        }
+
         UsuarioAdmin usuario = usuarioAdminRepository.findById(idUsuario)
                 .orElseThrow(() -> new NotFoundException("Usuario admin no encontrado con id: " + idUsuario));
 
-        usuario.desactivar();
+        if (usuario.isActivo() && usuarioAdminRepository.countByActivoTrue() <= 1) {
+            throw new BadRequestException("No puedes desactivar el último administrador activo.");
+        }
+
+        boolean changed = usuario.desactivar();
 
         UsuarioAdmin savedUser = usuarioAdminRepository.save(usuario);
+
+        if (changed) {
+            adminAuditService.record(
+                    AdminAuditAction.ADMIN_USER_DEACTIVATED,
+                    AdminAuditEntityType.ADMIN_USER,
+                    savedUser.getIdUsuario(),
+                    "Desactivó el administrador \"" + savedUser.getEmail() + "\"."
+            );
+        }
 
         return toResponse(savedUser);
     }

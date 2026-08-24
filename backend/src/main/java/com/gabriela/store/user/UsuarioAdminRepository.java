@@ -11,5 +11,5 @@ public interface UsuarioAdminRepository extends JpaRepository<UsuarioAdmin, Long
     Optional<UsuarioAdmin> findByEmailAndActivoTrue(String email);
     List<UsuarioAdmin> findByNombre(String nombre);
     List<UsuarioAdmin> findAllByOrderByIdUsuarioAsc();
-
+    long countByActivoTrue();
 }
