@@ -21,6 +21,7 @@ type AdminProductFormProps = {
   isSubmitting: boolean;
   errorMessage: string | null;
   successMessage?: ReactNode;
+  afterContent?: ReactNode;
   onCancel: () => void;
   onSubmit: (request: AdminProductUpsertRequest) => Promise<void>;
 };
@@ -35,6 +36,7 @@ export function AdminProductForm({
   isSubmitting,
   errorMessage,
   successMessage,
+  afterContent,
   onCancel,
   onSubmit,
 }: AdminProductFormProps) {
@@ -233,6 +235,8 @@ export function AdminProductForm({
           </div>
         </form>
       </section>
+
+      {afterContent}
     </main>
   );
 }

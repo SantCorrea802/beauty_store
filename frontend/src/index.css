@@ -2932,3 +2932,105 @@ img {
     grid-template-columns: 1fr;
   }
 }
+
+/* ================================
+   Admin product audit
+   ================================ */
+
+.admin-audit-card {
+  margin-top: 24px;
+  padding: 24px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.admin-audit-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.admin-audit-card h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 24px;
+}
+
+.admin-audit-card__header p {
+  margin: 6px 0 0;
+  color: var(--color-muted);
+}
+
+.admin-audit-list {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-audit-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, auto);
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-soft);
+}
+
+.admin-audit-item strong {
+  color: var(--color-text);
+}
+
+.admin-audit-item p {
+  margin: 6px 0 0;
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+
+.admin-audit-item__meta {
+  display: grid;
+  gap: 4px;
+  justify-items: end;
+  text-align: right;
+  color: var(--color-muted);
+  font-size: 14px;
+}
+
+.admin-audit-item__meta span {
+  color: var(--color-text);
+  font-weight: 800;
+}
+
+.admin-audit-item__meta small {
+  overflow-wrap: anywhere;
+}
+
+.admin-audit-item__meta time {
+  font-weight: 700;
+}
+
+@media (max-width: 700px) {
+  .admin-audit-card {
+    padding: 18px;
+  }
+
+  .admin-audit-card__header {
+    flex-direction: column;
+  }
+
+  .admin-audit-card__header .secondary-button {
+    width: 100%;
+  }
+
+  .admin-audit-item {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-audit-item__meta {
+    justify-items: start;
+    text-align: left;
+  }
+}

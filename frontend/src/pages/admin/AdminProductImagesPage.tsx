@@ -1,5 +1,6 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { AdminProductImagesManager } from "./AdminProductImagesManager";
+import { AdminProductAuditPanel } from "./AdminProductAuditPanel";
 
 export function AdminProductImagesPage() {
   const navigate = useNavigate();
@@ -53,6 +54,7 @@ export function AdminProductImagesPage() {
       </section>
 
       <AdminProductImagesManager productId={productId} />
+      <AdminProductAuditPanel productId={productId} />
     </main>
   );
 }

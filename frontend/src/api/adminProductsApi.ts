@@ -170,3 +170,28 @@ export function markAdminProductImageAsMain(
     },
   );
 }
+
+export type AdminProductAuditLog = {
+  id: number;
+  productoId: number;
+  productoNombre: string;
+  adminId: number;
+  adminEmail: string;
+  adminNombre: string;
+  accion: string;
+  detalle: string | null;
+  fechaEvento: string;
+};
+
+export function getAdminProductAudit(
+  productId: number,
+  limit = 20,
+): Promise<AdminProductAuditLog[]> {
+  return apiRequest<AdminProductAuditLog[]>(
+    `/api/admin/products/${productId}/audit?limit=${limit}`,
+    {
+      authenticated: true,
+      authMode: "admin",
+    },
+  );
+}

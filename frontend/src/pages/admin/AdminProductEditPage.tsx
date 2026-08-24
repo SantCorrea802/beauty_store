@@ -14,6 +14,7 @@ import {
   AdminProductForm,
   type AdminProductFormValues,
 } from "./AdminProductForm";
+import { AdminProductAuditPanel } from "./AdminProductAuditPanel";
 
 export function AdminProductEditPage() {
   const navigate = useNavigate();
@@ -153,6 +154,9 @@ export function AdminProductEditPage() {
       initialValues={initialValues}
       isSubmitting={isSubmitting}
       errorMessage={errorMessage}
+      afterContent={
+        hasValidProductId ? <AdminProductAuditPanel productId={productId} /> : null
+      }
       onCancel={() => navigate("/admin/products")}
       onSubmit={handleSubmit}
     />
