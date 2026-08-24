@@ -2505,3 +2505,292 @@ img {
     min-width: 0;
   }
 }
+/* ================================
+   Phase 4: visual polish
+   ================================ */
+
+.search__icon,
+.icon-button__icon,
+.nav-dropdown__chevron {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.search__button {
+  display: grid;
+  place-items: center;
+}
+
+.icon-button {
+  position: relative;
+  isolation: isolate;
+}
+
+.icon-button__icon {
+  width: 21px;
+  height: 21px;
+}
+
+.icon-button::before {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  z-index: -1;
+  border-radius: inherit;
+  background: rgba(169, 118, 191, 0.12);
+  opacity: 0;
+  transform: scale(0.72);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.icon-button:hover::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.nav-dropdown__trigger {
+  gap: 5px;
+}
+
+.nav-dropdown__chevron {
+  width: 15px;
+  height: 15px;
+  transition: transform 160ms ease;
+}
+
+.nav-dropdown__trigger[aria-expanded="true"] .nav-dropdown__chevron {
+  transform: rotate(180deg);
+}
+
+/* Barra principal menos rígida en desktop */
+@media (min-width: 701px) {
+  .app-header__nav {
+    height: auto;
+    padding: 8px 32px;
+    gap: 10px;
+    background: linear-gradient(
+      90deg,
+      rgba(234, 220, 241, 0.95),
+      rgba(244, 237, 248, 0.95)
+    );
+  }
+
+  .nav-dropdown {
+    min-width: 0;
+  }
+
+  .nav-link,
+  .nav-dropdown__trigger {
+    min-width: 142px;
+    min-height: 42px;
+    border: 1px solid rgba(116, 64, 128, 0.14);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.38);
+    box-shadow: 0 8px 18px rgba(82, 45, 99, 0.04);
+  }
+
+  .nav-link:hover,
+  .nav-dropdown__trigger:hover {
+    border-color: rgba(116, 64, 128, 0.26);
+    background: rgba(255, 255, 255, 0.64);
+  }
+
+  .nav-link--active {
+    color: white;
+    border-color: var(--color-primary-700);
+    background: var(--color-primary-700);
+    box-shadow: 0 10px 22px rgba(116, 64, 128, 0.18);
+  }
+
+  .nav-link--active::after {
+    display: none;
+  }
+
+  .nav-dropdown__menu {
+    top: calc(100% + 10px);
+    border-radius: var(--radius-md);
+  }
+}
+
+/* Barra móvil más limpia, sin perder las 3 columnas */
+@media (max-width: 700px) {
+  .app-header__nav {
+    height: 48px;
+    padding: 5px;
+    gap: 5px;
+    background: var(--color-primary-100);
+  }
+
+  .nav-link,
+  .nav-dropdown__trigger {
+    height: 38px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: transparent;
+    font-size: 11.5px;
+  }
+
+  .nav-link--active {
+    color: white;
+    border-color: var(--color-primary-700);
+    background: var(--color-primary-700);
+    box-shadow: 0 8px 18px rgba(116, 64, 128, 0.16);
+  }
+
+  .nav-link--active::after {
+    display: none;
+  }
+
+  .app-header--compact .app-header__nav {
+    height: 42px;
+    padding: 4px;
+  }
+
+  .app-header--compact .nav-link,
+  .app-header--compact .nav-dropdown__trigger {
+    height: 34px;
+    font-size: 10.8px;
+  }
+
+  .nav-dropdown__chevron {
+    width: 13px;
+    height: 13px;
+  }
+
+  .icon-button__icon {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* Cards: un poco más refinadas sin cambiar layout */
+.product-card {
+  border-color: rgba(116, 64, 128, 0.18);
+}
+
+.product-card__image-wrapper {
+  background:
+    radial-gradient(circle at 50% 35%, rgba(234, 220, 241, 0.78), rgba(255, 255, 255, 0.24) 58%),
+    var(--color-surface);
+}
+
+.product-card__action {
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.product-card__action:hover {
+  transform: translateY(-1px);
+}
+
+.product-card__favorite {
+  display: inline-grid;
+  place-items: center;
+  font-size: 18px;
+  line-height: 1;
+}
+
+@media (max-width: 700px) {
+  .product-card {
+    border-radius: 16px;
+  }
+
+  .product-card__image-wrapper {
+    height: 150px;
+  }
+
+  .product-card__image {
+    max-height: 128px;
+  }
+
+  .product-card__action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 360px) {
+  .product-card__image-wrapper {
+    height: 138px;
+  }
+
+  .product-card__image {
+    max-height: 116px;
+  }
+}
+
+/* ================================
+   Fix active header nav states
+   ================================ */
+
+.nav-link.nav-link--active,
+.nav-dropdown__trigger.nav-link--active,
+.nav-link.nav-link--active:hover,
+.nav-link.nav-link--active:focus,
+.nav-link.nav-link--active:focus-visible,
+.nav-link.nav-link--active:active,
+.nav-dropdown__trigger.nav-link--active:hover,
+.nav-dropdown__trigger.nav-link--active:focus,
+.nav-dropdown__trigger.nav-link--active:focus-visible,
+.nav-dropdown__trigger.nav-link--active:active {
+  color: white;
+  border-color: var(--color-primary-700);
+  background: var(--color-primary-700);
+  box-shadow: 0 10px 22px rgba(116, 64, 128, 0.18);
+}
+
+.nav-link.nav-link--active .nav-dropdown__chevron,
+.nav-dropdown__trigger.nav-link--active .nav-dropdown__chevron {
+  color: white;
+}
+
+.nav-link.nav-link--active::after,
+.nav-dropdown__trigger.nav-link--active::after {
+  display: none;
+}
+
+/* Estados hover/focus para botones NO activos */
+.nav-link:not(.nav-link--active):hover,
+.nav-link:not(.nav-link--active):focus-visible,
+.nav-dropdown__trigger:not(.nav-link--active):hover,
+.nav-dropdown__trigger:not(.nav-link--active):focus-visible {
+  color: var(--color-primary-700);
+  border-color: rgba(116, 64, 128, 0.26);
+  background: rgba(255, 255, 255, 0.64);
+}
+
+/* En móvil evitamos que el tap deje un estado blanco raro */
+@media (max-width: 700px) {
+  .nav-link,
+  .nav-dropdown__trigger {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .nav-link.nav-link--active,
+  .nav-dropdown__trigger.nav-link--active,
+  .nav-link.nav-link--active:hover,
+  .nav-link.nav-link--active:focus,
+  .nav-link.nav-link--active:focus-visible,
+  .nav-link.nav-link--active:active,
+  .nav-dropdown__trigger.nav-link--active:hover,
+  .nav-dropdown__trigger.nav-link--active:focus,
+  .nav-dropdown__trigger.nav-link--active:focus-visible,
+  .nav-dropdown__trigger.nav-link--active:active {
+    color: white;
+    border-color: var(--color-primary-700);
+    background: var(--color-primary-700);
+    box-shadow: 0 8px 18px rgba(116, 64, 128, 0.16);
+  }
+
+  .nav-link:not(.nav-link--active):active,
+  .nav-dropdown__trigger:not(.nav-link--active):active {
+    color: var(--color-primary-700);
+    background: rgba(255, 255, 255, 0.46);
+  }
+}

@@ -8,6 +8,15 @@ import {
 } from "react-router-dom";
 import { getCategories } from "../api/categoriesApi";
 import type { Category } from "../types/category";
+import {
+  CartIcon,
+  ChatIcon,
+  ChevronDownIcon,
+  InstagramIcon,
+  SearchIcon,
+  UserIcon,
+} from "./AppIcons";
+
 
 const whatsappPublicUrl = import.meta.env.VITE_WHATSAPP_PUBLIC_URL as
   | string
@@ -202,7 +211,7 @@ export function AppHeader() {
             onChange={(event) => setSearchTerm(event.target.value)}
           />
           <button className="search__button" type="submit" aria-label="Buscar">
-            🔍
+            <SearchIcon className="search__icon" />
           </button>
         </form>
 
@@ -222,7 +231,7 @@ export function AppHeader() {
                 : "WhatsApp público no configurado"
             }
           >
-            ☎
+            <ChatIcon className="icon-button__icon" />
           </a>
 
           <a
@@ -240,15 +249,15 @@ export function AppHeader() {
                 : "Instagram público no configurado"
             }
           >
-            ◎
+            <InstagramIcon className="icon-button__icon" />
           </a>
 
           <Link className="icon-button" to="/me/cart" aria-label="Carrito">
-            🛒
+            <CartIcon className="icon-button__icon" />
           </Link>
 
           <Link className="icon-button" to="/me" aria-label="Cuenta">
-            👤
+            <UserIcon className="icon-button__icon" />
           </Link>
         </nav>
       </div>
@@ -266,7 +275,7 @@ export function AppHeader() {
             aria-controls="categories-navigation-menu"
             onClick={() => setIsCategoriesOpen((current) => !current)}
           >
-            CATEGORÍAS <span aria-hidden="true">⌄</span>
+            CATEGORÍAS <ChevronDownIcon className="nav-dropdown__chevron" />
           </button>
 
           {isCategoriesOpen ? (
