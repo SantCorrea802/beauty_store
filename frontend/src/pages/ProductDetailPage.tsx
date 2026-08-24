@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { addCartItem } from "../api/cartApi";
-import { addFavorite } from "../api/favoritesApi";
+import {
+  addFavorite,
+  getMyFavorites,
+  removeFavorite,
+} from "../api/favoritesApi";
 import { getProductBySlug } from "../api/productsApi";
 import { getCustomerToken } from "../auth/authStorage";
 import type { ProductDetail } from "../types/product";
@@ -20,12 +24,18 @@ export function ProductDetailPage() {
   const [selectedImageId, setSelectedImageId] = useState<number | null>(null);
   const [quantity, setQuantity] = useState(1);
 
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [isLoadingFavoriteState, setIsLoadingFavoriteState] = useState(false);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingCart, setIsAddingCart] = useState(false);
-  const [isAddingFavorite, setIsAddingFavorite] = useState(false);
+  const [isTogglingFavorite, setIsTogglingFavorite] = useState(false);
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [feedbackVariant, setFeedbackVariant] = useState<"success" | "error">(
+    "success",
+  );
 
   useEffect(() => {
     let ignore = false;
@@ -47,6 +57,7 @@ export function ProductDetailPage() {
         if (!ignore) {
           setProduct(productFromApi);
           setSelectedImageId(null);
+          setIsFavorite(false);
         }
       } catch (error) {
         if (!ignore) {
@@ -71,6 +82,47 @@ export function ProductDetailPage() {
     };
   }, [slug]);
 
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadFavoriteState() {
+      if (!product) {
+        return;
+      }
+
+      if (!getCustomerToken()) {
+        setIsFavorite(false);
+        return;
+      }
+
+      try {
+        setIsLoadingFavoriteState(true);
+
+        const favorites = await getMyFavorites();
+
+        if (!ignore) {
+          setIsFavorite(
+            favorites.some((favorite) => favorite.productId === product.id),
+          );
+        }
+      } catch {
+        if (!ignore) {
+          setIsFavorite(false);
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoadingFavoriteState(false);
+        }
+      }
+    }
+
+    loadFavoriteState();
+
+    return () => {
+      ignore = true;
+    };
+  }, [product]);
+
   function redirectToLogin(message: string) {
     if (!product) {
       return;
@@ -84,7 +136,7 @@ export function ProductDetailPage() {
     });
   }
 
-  async function handleAddFavorite() {
+  async function handleToggleFavorite() {
     if (!product) {
       return;
     }
@@ -95,21 +147,34 @@ export function ProductDetailPage() {
     }
 
     try {
-      setIsAddingFavorite(true);
+      setIsTogglingFavorite(true);
       setFeedbackMessage(null);
 
-      await addFavorite(product.id);
+      if (isFavorite) {
+        await removeFavorite(product.id);
 
-      setFeedbackMessage(`${product.nombre} fue agregado a favoritos.`);
+        setIsFavorite(false);
+        setFeedbackVariant("success");
+        setFeedbackMessage(`${product.nombre} fue quitado de favoritos.`);
+      } else {
+        await addFavorite(product.id);
+
+        setIsFavorite(true);
+        setFeedbackVariant("success");
+        setFeedbackMessage(`${product.nombre} fue agregado a favoritos.`);
+      }
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
-          : "No fue posible agregar el producto a favoritos.";
+          : isFavorite
+            ? "No fue posible quitar el producto de favoritos."
+            : "No fue posible agregar el producto a favoritos.";
 
+      setFeedbackVariant("error");
       setFeedbackMessage(message);
     } finally {
-      setIsAddingFavorite(false);
+      setIsTogglingFavorite(false);
     }
   }
 
@@ -132,6 +197,7 @@ export function ProductDetailPage() {
         quantity,
       });
 
+      setFeedbackVariant("success");
       setFeedbackMessage(`${product.nombre} fue agregado al carrito.`);
     } catch (error) {
       const message =
@@ -139,6 +205,7 @@ export function ProductDetailPage() {
           ? error.message
           : "No fue posible agregar el producto al carrito.";
 
+      setFeedbackVariant("error");
       setFeedbackMessage(message);
     } finally {
       setIsAddingCart(false);
@@ -271,12 +338,21 @@ export function ProductDetailPage() {
             </button>
 
             <button
-              className="secondary-button"
+              className={
+                isFavorite
+                  ? "secondary-button product-detail__favorite-button product-detail__favorite-button--active"
+                  : "secondary-button product-detail__favorite-button"
+              }
               type="button"
-              onClick={handleAddFavorite}
-              disabled={isAddingFavorite}
+              onClick={handleToggleFavorite}
+              disabled={isTogglingFavorite || isLoadingFavoriteState}
+              aria-pressed={isFavorite}
             >
-              {isAddingFavorite ? "Guardando..." : "♡ Agregar a favoritos"}
+              {isTogglingFavorite
+                ? "Guardando..."
+                : isFavorite
+                  ? "♥ Quitar de favoritos"
+                  : "♡ Agregar a favoritos"}
             </button>
 
             <Link className="secondary-button auth-card__link-button" to="/me/cart">
@@ -285,7 +361,13 @@ export function ProductDetailPage() {
           </div>
 
           {feedbackMessage ? (
-            <div className="form-message form-message--success product-detail__feedback">
+            <div
+              className={
+                feedbackVariant === "success"
+                  ? "form-message form-message--success product-detail__feedback"
+                  : "form-message form-message--error product-detail__feedback"
+              }
+            >
               {feedbackMessage}
             </div>
           ) : null}

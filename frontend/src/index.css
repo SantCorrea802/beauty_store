@@ -2794,3 +2794,26 @@ img {
     background: rgba(255, 255, 255, 0.46);
   }
 }
+
+/* ================================
+   Product detail favorite state
+   ================================ */
+
+.product-detail__favorite-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.product-detail__favorite-button--active {
+  color: #c9365d;
+  border-color: rgba(201, 54, 93, 0.38);
+  background: #fff1f5;
+  box-shadow: 0 8px 18px rgba(201, 54, 93, 0.12);
+}
+
+.product-detail__favorite-button--active:hover {
+  color: #b4234d;
+  border-color: rgba(201, 54, 93, 0.52);
+  background: #ffe5ed;
+}
