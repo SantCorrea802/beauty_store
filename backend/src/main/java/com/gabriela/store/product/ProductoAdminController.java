@@ -15,6 +15,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import com.gabriela.store.product.dto.ProductResponse;
+import com.gabriela.store.audit.ProductoAuditLogResponse;
+import com.gabriela.store.audit.ProductoAuditLogService;
 
 import java.util.List;
 
@@ -23,11 +25,19 @@ import java.util.List;
 public class ProductoAdminController {
     private final ProductoService productoService;
     private final ImagenProductoService imagenProductoService;
+    private final ProductoAuditLogService productoAuditLogService;
 
-    public ProductoAdminController(ProductoService productoService, ImagenProductoService imagenProductoService) {
+    public ProductoAdminController(
+            ProductoService productoService,
+            ImagenProductoService imagenProductoService,
+            ProductoAuditLogService productoAuditLogService
+    ) {
         this.productoService = productoService;
         this.imagenProductoService = imagenProductoService;
+        this.productoAuditLogService = productoAuditLogService;
     }
+
+
 
     @GetMapping
     public List<ProductResponse> findAll() {
@@ -37,6 +47,14 @@ public class ProductoAdminController {
     @GetMapping("/{id}")
     public ProductDetailResponse findById(@PathVariable Long id) {
         return productoService.findByIdForAdmin(id);
+    }
+
+    @GetMapping("/{id}/audit")
+    public List<ProductoAuditLogResponse> findProductAudit(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "20") int limit
+    ) {
+        return productoAuditLogService.findByProduct(id, limit);
     }
 
     @PostMapping
