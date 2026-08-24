@@ -147,7 +147,7 @@ export function AdminProductEditPage() {
     <AdminProductForm
       eyebrow="Catálogo interno"
       title={`Editar ${product?.nombre ?? "producto"}`}
-      description="Actualiza los datos principales del producto. Si cambias el nombre, el backend regenerará el slug público."
+      description="Actualiza los datos principales del producto."
       submitLabel="Guardar cambios"
       categories={categories}
       initialValues={initialValues}

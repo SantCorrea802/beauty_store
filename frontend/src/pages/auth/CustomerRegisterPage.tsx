@@ -29,7 +29,7 @@ export function CustomerRegisterPage() {
       });
 
       setSuccessMessage(
-        "Cuenta creada. Revisa el link de verificación en la consola del backend mientras estamos en modo local.",
+        "Cuenta creada. Te enviamos un correo para verificar tu cuenta. Revisa tu bandeja de entrada o la carpeta de spam.",
       );
 
       setEmail("");

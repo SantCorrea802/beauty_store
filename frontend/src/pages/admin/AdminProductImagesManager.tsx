@@ -165,8 +165,7 @@ export function AdminProductImagesManager({
         <div>
           <h2>Imágenes {product ? `de ${product.nombre}` : ""}</h2>
           <p>
-            Sube imágenes JPG, PNG o WEBP. El backend limita cada archivo a 5 MB
-            y las almacena en Cloudinary.
+            Sube imágenes JPG, PNG o WEBP. Cada archivo puede pesar máximo 5 MB.
           </p>
         </div>
       </div>

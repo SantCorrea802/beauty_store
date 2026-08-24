@@ -372,10 +372,6 @@ export function CustomerCartPage() {
                 Vaciar carrito
               </button>
 
-              <p className="cart-summary__note">
-                El total es estimado. La disponibilidad, entrega y pago se
-                confirman por WhatsApp.
-              </p>
             </aside>
           </div>
         ) : null}

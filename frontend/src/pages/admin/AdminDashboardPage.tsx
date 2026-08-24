@@ -54,6 +54,8 @@ export function AdminDashboardPage() {
     navigate("/admin/login", { replace: true });
   }
 
+
+  
   return (
     <main className="page admin-page">
       <section className="admin-hero">
@@ -93,8 +95,7 @@ export function AdminDashboardPage() {
               Gestionar productos
             </Link>
             <small>
-              Pendiente: agregar endpoints GET admin de productos antes de
-              construir esta pantalla.
+              Administra productos, imágenes, estados y categorías asociadas desde el panel.
             </small>
           </article>
 
@@ -113,15 +114,28 @@ export function AdminDashboardPage() {
               visibles para esta cuenta.
             </p>
 
-            <div className="admin-user-list">
-              {users.map((user) => (
-                <div className="admin-user-list__item" key={user.id}>
-                  <strong>{user.nombre}</strong>
-                  <span>{user.email}</span>
-                  <span>{user.rol} · {user.activo ? "Activo" : "Inactivo"}</span>
-                </div>
-              ))}
-            </div>
+            {users.length > 0 ? (
+              <div className="admin-user-list">
+                {users.slice(0, 5).map((user) => (
+                  <div className="admin-user-list__item" key={user.id}>
+                    <strong>{user.nombre}</strong>
+                    <span>{user.email}</span>
+                    <span>
+                      {user.rol} · {user.activo ? "Activo" : "Inactivo"}
+                    </span>
+                  </div>
+                ))}
+
+                {users.length > 5 ? (
+                  <div className="admin-user-list__more">
+                    +{users.length - 5} administrador(es) más. Usa la gestión de
+                    usuarios para ver la lista completa.
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <p>No hay usuarios admin visibles.</p>
+            )}
           </article>
         </section>
       ) : null}
