@@ -20,6 +20,9 @@ import { AdminProductCreatePage } from "./pages/admin/AdminProductCreatePage";
 import { AdminProductEditPage } from "./pages/admin/AdminProductEditPage";
 import { AdminProductImagesPage } from "./pages/admin/AdminProductImagesPage";
 import { AppFooter } from "./components/AppFooter";
+import { AdminCategoriesPage } from "./pages/admin/AdminCategoriesPage";
+import { AdminCategoryCreatePage } from "./pages/admin/AdminCategoryCreatePage";
+import { AdminCategoryEditPage } from "./pages/admin/AdminCategoryEditPage";
 
 function App() {
   return (
@@ -123,6 +126,32 @@ function App() {
             }
           />
 
+          <Route
+            path="admin/categories"
+            element={
+              <AdminProtectedRoute>
+                <AdminCategoriesPage />
+              </AdminProtectedRoute>
+            }
+          />
+
+          <Route
+            path="admin/categories/new"
+            element={
+              <AdminProtectedRoute>
+                <AdminCategoryCreatePage />
+              </AdminProtectedRoute>
+            }
+          />
+
+          <Route
+            path="admin/categories/:id/edit"
+            element={
+              <AdminProtectedRoute>
+                <AdminCategoryEditPage />
+              </AdminProtectedRoute>
+            }
+          />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
