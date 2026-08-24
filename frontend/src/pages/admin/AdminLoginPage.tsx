@@ -6,6 +6,7 @@ import { saveAdminToken } from "../../admin/adminAuthStorage";
 
 type LocationState = {
   from?: string;
+  reason?: "expired" | "missing";
 };
 
 export function AdminLoginPage() {
@@ -14,6 +15,11 @@ export function AdminLoginPage() {
 
   const state = location.state as LocationState | null;
   const redirectTo = state?.from ?? "/admin";
+
+  const sessionMessage =
+    state?.reason === "expired"
+      ? "Tu sesión de administrador expiró. Inicia sesión nuevamente."
+      : null;
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -57,6 +63,12 @@ export function AdminLoginPage() {
           Ingresa con una cuenta administradora para gestionar productos,
           categorías e imágenes.
         </p>
+    
+        {sessionMessage ? (
+          <div className="form-message form-message--info">
+            {sessionMessage}
+          </div>
+        ) : null}
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <label className="form-field">

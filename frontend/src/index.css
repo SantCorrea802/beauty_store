@@ -3034,3 +3034,22 @@ img {
     text-align: left;
   }
 }
+/* ================================
+   Auth link button polish
+   ================================ */
+
+.auth-card__link-button {
+  width: 100%;
+  margin-top: 14px;
+  text-decoration: none;
+}
+
+/* ================================
+   Informational form messages
+   ================================ */
+
+.form-message--info {
+  color: var(--color-primary-700);
+  border: 1px solid rgba(116, 64, 128, 0.24);
+  background: rgba(116, 64, 128, 0.08);
+}

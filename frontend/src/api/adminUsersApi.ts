@@ -6,13 +6,21 @@ export type AdminUserResponse = {
   email: string;
   rol: string;
   activo: boolean;
+  emailVerificado?: boolean;
 };
 
-export type AdminUserCreateRequest = {
+export type AdminInvitationRequest = {
   nombre: string;
   email: string;
+};
+
+export type AcceptAdminInvitationRequest = {
+  token: string;
   password: string;
-  rol: "ADMIN";
+};
+
+export type AdminInvitationResponse = {
+  message: string;
 };
 
 export function getAdminUsers(): Promise<AdminUserResponse[]> {
@@ -22,15 +30,27 @@ export function getAdminUsers(): Promise<AdminUserResponse[]> {
   });
 }
 
-export function createAdminUser(
-  request: AdminUserCreateRequest,
+export function inviteAdminUser(
+  request: AdminInvitationRequest,
 ): Promise<AdminUserResponse> {
-  return apiRequest<AdminUserResponse>("/api/admin/users", {
+  return apiRequest<AdminUserResponse>("/api/admin/users/invitations", {
     method: "POST",
     authenticated: true,
     authMode: "admin",
     body: JSON.stringify(request),
   });
+}
+
+export function acceptAdminInvitation(
+  request: AcceptAdminInvitationRequest,
+): Promise<AdminInvitationResponse> {
+  return apiRequest<AdminInvitationResponse>(
+    "/api/auth/admin/invitations/accept",
+    {
+      method: "POST",
+      body: JSON.stringify(request),
+    },
+  );
 }
 
 export function activateAdminUser(

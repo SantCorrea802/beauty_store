@@ -26,10 +26,13 @@ import { AdminCategoryEditPage } from "./pages/admin/AdminCategoryEditPage";
 import { CategoriesPage } from "./pages/CategoriesPage";
 import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
 import { AdminUserCreatePage } from "./pages/admin/AdminUserCreatePage";
+import { AdminAcceptInvitationPage } from "./pages/admin/AdminAcceptInvitationPage";
+import { AdminSessionWatcher } from "./admin/AdminSessionWatcher";
 
 function App() {
   return (
     <div className="app-shell">
+      <AdminSessionWatcher />
       <AppHeader />
 
       <div className="app-content">
@@ -84,6 +87,11 @@ function App() {
           />
 
           <Route path="admin/login" element={<AdminLoginPage />} />
+
+          <Route
+            path="admin/accept-invitation"
+            element={<AdminAcceptInvitationPage />}
+          />
 
           <Route
             path="admin"

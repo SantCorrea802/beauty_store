@@ -1,4 +1,5 @@
-import { getAdminToken } from "../admin/adminAuthStorage";
+import { getAdminToken, removeAdminToken } from "../admin/adminAuthStorage";
+import { dispatchAdminSessionExpired } from "../admin/adminSessionEvents";
 import { getCustomerToken } from "../auth/authStorage";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -50,13 +51,12 @@ export async function apiRequest<T>(
   }
 
   if (authenticated) {
-    const token =
-      authMode === "admin" ? getAdminToken() : getCustomerToken();
+    const token = authMode === "admin" ? getAdminToken() : getCustomerToken();
 
     if (!token) {
       throw new ApiError(
         authMode === "admin"
-          ? "No hay sesión de administrador activa."
+          ? "Tu sesión de administrador expiró. Inicia sesión nuevamente."
           : "No hay sesión de cliente activa.",
         401,
       );
@@ -65,10 +65,20 @@ export async function apiRequest<T>(
     requestHeaders.set("Authorization", `Bearer ${token}`);
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...fetchOptions,
-    headers: requestHeaders,
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...fetchOptions,
+      headers: requestHeaders,
+    });
+  } catch (error) {
+    throw new ApiError(
+      "No fue posible conectar con el servidor. Verifica tu conexión o intenta nuevamente.",
+      0,
+      error,
+    );
+  }
 
   const contentType = response.headers.get("content-type");
   const hasJson = contentType?.includes("application/json");
@@ -76,6 +86,21 @@ export async function apiRequest<T>(
   const body = hasJson ? await response.json() : null;
 
   if (!response.ok) {
+    if (
+      authenticated &&
+      authMode === "admin" &&
+      (response.status === 401 || response.status === 403)
+    ) {
+      removeAdminToken();
+      dispatchAdminSessionExpired();
+
+      throw new ApiError(
+        "Tu sesión de administrador expiró. Inicia sesión nuevamente.",
+        response.status,
+        body,
+      );
+    }
+
     const message =
       body?.message ??
       body?.error ??

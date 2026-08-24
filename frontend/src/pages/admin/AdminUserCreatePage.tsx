@@ -1,14 +1,13 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { createAdminUser } from "../../api/adminUsersApi";
+import { inviteAdminUser } from "../../api/adminUsersApi";
 
 export function AdminUserCreatePage() {
   const navigate = useNavigate();
 
   const [nombre, setNombre] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationMessage, setValidationMessage] = useState<string | null>(
@@ -38,37 +37,28 @@ export function AdminUserCreatePage() {
       return;
     }
 
-    if (password.length < 10) {
-      setValidationMessage(
-        "La contraseña debe tener al menos 10 caracteres.",
-      );
-      return;
-    }
-
     try {
       setIsSubmitting(true);
       setValidationMessage(null);
       setErrorMessage(null);
       setSuccessMessage(null);
 
-      const createdUser = await createAdminUser({
+      const invitedUser = await inviteAdminUser({
         nombre: normalizedName,
         email: normalizedEmail,
-        password,
-        rol: "ADMIN",
       });
 
       setSuccessMessage(
-        `Administrador "${createdUser.email}" creado correctamente.`,
+        `Invitación enviada a "${invitedUser.email}". El administrador deberá aceptar el enlace desde su correo y definir su contraseña.`,
       );
+
       setNombre("");
       setEmail("");
-      setPassword("");
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
-          : "No fue posible crear el administrador.";
+          : "No fue posible enviar la invitación.";
 
       setErrorMessage(message);
     } finally {
@@ -81,10 +71,11 @@ export function AdminUserCreatePage() {
       <section className="admin-hero">
         <div>
           <p className="section-heading__eyebrow">Panel interno</p>
-          <h1>Crear admin</h1>
+          <h1>Invitar admin</h1>
           <p>
-            Crea una cuenta administrativa para acceder al panel interno de
-            Hajuvi.
+            Envía una invitación al correo del nuevo administrador. La cuenta
+            quedará activa solo cuando la persona acepte el enlace y defina su
+            contraseña.
           </p>
         </div>
 
@@ -113,7 +104,7 @@ export function AdminUserCreatePage() {
             </label>
 
             <label className="form-field">
-              <span>Correo</span>
+              <span>Correo real</span>
               <input
                 type="email"
                 value={email}
@@ -125,22 +116,9 @@ export function AdminUserCreatePage() {
             </label>
           </div>
 
-          <label className="form-field">
-            <span>Contraseña temporal</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              minLength={10}
-              required
-              placeholder="Mínimo 10 caracteres"
-            />
-          </label>
-
           <p className="admin-form-help">
-            Entrega esta contraseña solo por un canal seguro. El administrador
-            debe cambiarla después del primer ingreso si defines ese proceso
-            operativo.
+            No se crea contraseña temporal. El administrador invitado debe tener
+            acceso real a este correo para aceptar la invitación.
           </p>
 
           {successMessage ? (
@@ -176,7 +154,7 @@ export function AdminUserCreatePage() {
               type="submit"
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Creando..." : "Crear admin"}
+              {isSubmitting ? "Enviando..." : "Enviar invitación"}
             </button>
           </div>
         </form>
