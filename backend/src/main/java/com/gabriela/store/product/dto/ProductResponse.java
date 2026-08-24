@@ -10,6 +10,7 @@ public record ProductResponse(
         String slug,
         boolean activo,
         String marca,
-        String imagenPrincipalUrl
+        String imagenPrincipalUrl,
+        boolean tieneVariantes
 ) {
 }

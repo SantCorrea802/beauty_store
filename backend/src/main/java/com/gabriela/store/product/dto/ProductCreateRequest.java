@@ -1,5 +1,6 @@
 package com.gabriela.store.product.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
@@ -21,7 +22,9 @@ public record ProductCreateRequest(
         String marca,
 
         @NotEmpty(message = "El producto debe tener al menos una categoría.")
-        List<Long> categoriaIds
-) {
+        List<Long> categoriaIds,
 
+        @Valid
+        List<ProductVariantRequest> variantes
+) {
 }

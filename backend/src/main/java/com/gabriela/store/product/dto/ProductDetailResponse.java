@@ -15,6 +15,7 @@ public record ProductDetailResponse(
         boolean activo,
         String marca,
         List<CategoryResponse> categorias,
-        List<ImageResponse> imagenes
+        List<ImageResponse> imagenes,
+        List<ProductVariantResponse> variantes
 ) {
 }

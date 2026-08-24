@@ -62,6 +62,9 @@ public class Producto {
     @OneToMany(mappedBy = "producto")
     private List<ImagenProducto> imagenes = new ArrayList<>();
 
+    @OneToMany(mappedBy = "producto")
+    private List<ProductoVariante> variantes = new ArrayList<>();
+
     public Producto(String nombreProducto, BigDecimal precio, String descripcion, String slug, String marca, UsuarioAdmin creadoPor) {
         this.nombreProducto = nombreProducto;
         this.precio = precio;

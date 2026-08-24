@@ -21,6 +21,15 @@ import com.gabriela.store.user.UsuarioAdmin;
 import com.gabriela.store.user.UsuarioAdminRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.gabriela.store.product.dto.ProductVariantRequest;
+import com.gabriela.store.product.dto.ProductVariantResponse;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Pattern;
 
 import java.util.HashSet;
 import java.util.List;
@@ -28,12 +37,14 @@ import java.util.List;
 @Service
 public class ProductoService {
 
+    private static final Pattern HEX_COLOR_PATTERN = Pattern.compile("^#[0-9A-Fa-f]{6}$");
     private final ProductoRepository productoRepository;
     private final CategoriaRepository categoriaRepository;
     private final ProductoCategoriaRepository productoCategoriaRepository;
     private final ProductoAuditLogRepository productoAuditLogRepository;
     private final CurrentAdminService currentAdminService;
     private final ImagenProductoRepository imagenProductoRepository;
+    private final ProductoVarianteRepository productoVarianteRepository;
 
     public ProductoService(
             ProductoRepository productoRepository,
@@ -41,7 +52,8 @@ public class ProductoService {
             ProductoCategoriaRepository productoCategoriaRepository,
             ProductoAuditLogRepository productoAuditLogRepository,
             CurrentAdminService currentAdminService,
-            ImagenProductoRepository imagenProductoRepository
+            ImagenProductoRepository imagenProductoRepository,
+            ProductoVarianteRepository productoVarianteRepository
     ) {
         this.productoRepository = productoRepository;
         this.categoriaRepository = categoriaRepository;
@@ -49,6 +61,7 @@ public class ProductoService {
         this.productoAuditLogRepository = productoAuditLogRepository;
         this.currentAdminService = currentAdminService;
         this.imagenProductoRepository = imagenProductoRepository;
+        this.productoVarianteRepository = productoVarianteRepository;
     }
     // el siguiente metodo devuelve los productos activos
     @Transactional(readOnly = true)
@@ -114,6 +127,7 @@ public class ProductoService {
                 .toList();
 
         productoCategoriaRepository.saveAll(relaciones);
+        syncVariants(savedProduct, request.variantes() == null ? List.of() : request.variantes());
 
         productoAuditLogRepository.save(new ProductoAuditLog(
                 savedProduct,
@@ -199,7 +213,8 @@ public class ProductoService {
                 producto.getSlug(),
                 producto.isActivo(),
                 producto.getMarca(),
-                imagenPrincipalUrl
+                imagenPrincipalUrl,
+                productoVarianteRepository.existsByProducto_IdProductoAndActivoTrue(producto.getIdProducto())
         );
     }
 
@@ -222,6 +237,12 @@ public class ProductoService {
                 .map(this::toImageResponse)
                 .toList();
 
+        List<ProductVariantResponse> variantes = productoVarianteRepository
+                .findByProducto_IdProductoAndActivoTrueOrderByOrdenAsc(producto.getIdProducto())
+                .stream()
+                .map(this::toVariantResponse)
+                .toList();
+
         return new ProductDetailResponse(
                 producto.getIdProducto(),
                 producto.getNombreProducto(),
@@ -231,7 +252,8 @@ public class ProductoService {
                 producto.isActivo(),
                 producto.getMarca(),
                 categorias,
-                imagenes
+                imagenes,
+                variantes
         );
     }
 
@@ -294,6 +316,10 @@ public class ProductoService {
                 .toList();
 
         productoCategoriaRepository.saveAll(nuevasRelaciones);
+
+        if (request.variantes() != null) {
+            syncVariants(savedProduct, request.variantes());
+        }
 
         productoAuditLogRepository.save(new ProductoAuditLog(
                 savedProduct,
@@ -412,5 +438,134 @@ public class ProductoService {
                 .orElseThrow(() -> new NotFoundException("Producto no encontrado con id: " + idProducto));
 
         return toDetailResponse(producto);
+    }
+
+    private void syncVariants(Producto producto, List<ProductVariantRequest> requestedVariants) {
+        List<ProductVariantRequest> normalizedRequests = normalizeVariantRequests(requestedVariants);
+
+        List<ProductoVariante> existingVariants =
+                productoVarianteRepository.findByProducto_IdProductoOrderByOrdenAsc(producto.getIdProducto());
+
+        Map<Long, ProductoVariante> existingById = new HashMap<>();
+
+        for (ProductoVariante variant : existingVariants) {
+            existingById.put(variant.getIdVariante(), variant);
+        }
+
+        Set<Long> requestedExistingIds = normalizedRequests
+                .stream()
+                .map(ProductVariantRequest::id)
+                .filter(id -> id != null)
+                .collect(java.util.stream.Collectors.toSet());
+
+        List<ProductoVariante> variantsToSave = new ArrayList<>();
+
+        for (int index = 0; index < normalizedRequests.size(); index++) {
+            ProductVariantRequest request = normalizedRequests.get(index);
+
+            String name = normalizeVariantName(request.nombre());
+            String colorHex = normalizeColorHex(request.colorHex());
+
+            if (request.id() != null) {
+                ProductoVariante existing = existingById.get(request.id());
+
+                if (existing == null) {
+                    throw new BadRequestException(
+                            "La variante " + request.id() + " no pertenece al producto " + producto.getIdProducto() + "."
+                    );
+                }
+
+                existing.actualizarDatos(name, colorHex, index);
+                variantsToSave.add(existing);
+            } else {
+                variantsToSave.add(new ProductoVariante(
+                        producto,
+                        name,
+                        colorHex,
+                        index
+                ));
+            }
+        }
+
+        for (ProductoVariante existing : existingVariants) {
+            if (!requestedExistingIds.contains(existing.getIdVariante())) {
+                existing.desactivar();
+                variantsToSave.add(existing);
+            }
+        }
+
+        productoVarianteRepository.saveAll(variantsToSave);
+    }
+
+    private List<ProductVariantRequest> normalizeVariantRequests(
+            List<ProductVariantRequest> requestedVariants
+    ) {
+        if (requestedVariants == null || requestedVariants.isEmpty()) {
+            return List.of();
+        }
+
+        List<ProductVariantRequest> normalized = new ArrayList<>();
+        Set<String> seenNames = new java.util.HashSet<>();
+
+        for (ProductVariantRequest request : requestedVariants) {
+            if (request == null) {
+                throw new BadRequestException("La variante no puede ser nula.");
+            }
+
+            String name = normalizeVariantName(request.nombre());
+            String colorHex = normalizeColorHex(request.colorHex());
+
+            String nameKey = name.toLowerCase(Locale.ROOT);
+
+            if (!seenNames.add(nameKey)) {
+                throw new BadRequestException("No puede haber tonos duplicados en el mismo producto: " + name + ".");
+            }
+
+            normalized.add(new ProductVariantRequest(
+                    request.id(),
+                    name,
+                    colorHex
+            ));
+        }
+
+        return normalized;
+    }
+
+    private String normalizeVariantName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new BadRequestException("El nombre del tono es obligatorio.");
+        }
+
+        String trimmed = name.trim();
+
+        if (trimmed.length() > 80) {
+            throw new BadRequestException("El nombre del tono no puede superar 80 caracteres.");
+        }
+
+        return trimmed;
+    }
+
+    private String normalizeColorHex(String colorHex) {
+        if (colorHex == null || colorHex.isBlank()) {
+            throw new BadRequestException("El color del tono es obligatorio.");
+        }
+
+        String normalized = colorHex.trim();
+
+        if (!HEX_COLOR_PATTERN.matcher(normalized).matches()) {
+            throw new BadRequestException("El color debe tener formato hexadecimal, por ejemplo #C08A7A.");
+        }
+
+        return normalized.toUpperCase(Locale.ROOT);
+    }
+
+    private ProductVariantResponse toVariantResponse(ProductoVariante variante) {
+        return new ProductVariantResponse(
+                variante.getIdVariante(),
+                variante.getNombre(),
+                variante.getColorHex(),
+                variante.getOrden(),
+                variante.isActivo()
+        );
     }
 }
