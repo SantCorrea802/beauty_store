@@ -23,21 +23,30 @@ export function AppHeader() {
   const [searchParams] = useSearchParams();
 
   const currentQuery = searchParams.get("q") ?? "";
+  const currentCategorySlug = searchParams.get("category");
 
   const categoriesMenuRef = useRef<HTMLDivElement | null>(null);
+  const isHeaderCompactRef = useRef(false);
 
   const [searchTerm, setSearchTerm] = useState(currentQuery);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
   const [isHeaderCompact, setIsHeaderCompact] = useState(false);
 
-  const isHeaderCompactRef = useRef(false);
-
   const visibleCategories = useMemo(() => {
     return categories.slice(0, HEADER_CATEGORY_LIMIT);
   }, [categories]);
 
   const hasMoreCategories = categories.length > visibleCategories.length;
+
+  const isCategoriesActive =
+    isCategoriesOpen ||
+    Boolean(currentCategorySlug) ||
+    location.pathname === "/categories";
+
+  const isAllActive = location.pathname === "/" && !currentCategorySlug;
+
+  const isFavoritesActive = location.pathname === "/me/favorites";
 
   useEffect(() => {
     setSearchTerm(currentQuery);
@@ -58,14 +67,6 @@ export function AppHeader() {
     function updateHeaderState() {
       const scrollY = window.scrollY;
 
-      /*
-        Umbrales con histéresis fuerte:
-
-        - Compacta solo después de bajar bastante.
-        - Expande solo al volver prácticamente al inicio.
-
-        Esto evita el bucle causado por cambios de altura del header.
-      */
       if (!isHeaderCompactRef.current && scrollY > 90) {
         setCompactMode(true);
         return;
@@ -173,7 +174,11 @@ export function AppHeader() {
   }
 
   return (
-    <header className={isHeaderCompact ? "app-header app-header--compact" : "app-header"}>
+    <header
+      className={
+        isHeaderCompact ? "app-header app-header--compact" : "app-header"
+      }
+    >
       <div className="app-header__top">
         <Link to="/" className="brand" aria-label="Ir al inicio">
           <img
@@ -238,10 +243,6 @@ export function AppHeader() {
             ◎
           </a>
 
-          <Link className="icon-button" to="/me/favorites" aria-label="Favoritos">
-            ♡
-          </Link>
-
           <Link className="icon-button" to="/me/cart" aria-label="Carrito">
             🛒
           </Link>
@@ -255,7 +256,11 @@ export function AppHeader() {
       <nav className="app-header__nav" aria-label="Navegación principal">
         <div className="nav-dropdown" ref={categoriesMenuRef}>
           <button
-            className="nav-link nav-link--active nav-dropdown__trigger"
+            className={
+              isCategoriesActive
+                ? "nav-link nav-link--active nav-dropdown__trigger"
+                : "nav-link nav-dropdown__trigger"
+            }
             type="button"
             aria-expanded={isCategoriesOpen}
             aria-controls="categories-navigation-menu"
@@ -265,10 +270,7 @@ export function AppHeader() {
           </button>
 
           {isCategoriesOpen ? (
-            <div
-              id="categories-navigation-menu"
-              className="nav-dropdown__menu"
-            >
+            <div id="categories-navigation-menu" className="nav-dropdown__menu">
               <Link
                 className="nav-dropdown__item"
                 to="/"
@@ -307,12 +309,20 @@ export function AppHeader() {
           ) : null}
         </div>
 
-        <Link className="nav-link" to="/">
-          CATÁLOGO
+        <Link
+          className={isAllActive ? "nav-link nav-link--active" : "nav-link"}
+          to="/"
+        >
+          TODOS
         </Link>
 
-        <Link className="nav-link" to="/me/cart">
-          CARRITO
+        <Link
+          className={
+            isFavoritesActive ? "nav-link nav-link--active" : "nav-link"
+          }
+          to="/me/favorites"
+        >
+          FAVORITOS
         </Link>
       </nav>
     </header>

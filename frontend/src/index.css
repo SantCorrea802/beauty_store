@@ -2473,3 +2473,35 @@ img {
   opacity: 0.68;
   transform: none;
 }
+
+/* ================================
+   Header semantic nav polish
+   ================================ */
+
+.nav-dropdown .nav-link {
+  border-left: 0;
+}
+
+.app-header__nav > .nav-link {
+  border-left: 1px solid rgba(116, 64, 128, 0.28);
+}
+
+.app-header__nav > .nav-link:first-of-type {
+  border-left: 1px solid rgba(116, 64, 128, 0.28);
+}
+
+.nav-dropdown__trigger span {
+  margin-left: 3px;
+  font-size: 12px;
+}
+
+@media (max-width: 700px) {
+  .app-header__nav {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .nav-dropdown .nav-link,
+  .app-header__nav > .nav-link {
+    min-width: 0;
+  }
+}
