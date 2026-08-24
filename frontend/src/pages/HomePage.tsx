@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { addFavorite } from "../api/favoritesApi";
+import {
+  addFavorite,
+  getMyFavorites,
+  removeFavorite,
+} from "../api/favoritesApi";
 import { getProducts, getProductsByCategory } from "../api/productsApi";
 import { getCustomerToken } from "../auth/authStorage";
 import { ProductCard } from "../components/ProductCard";
@@ -16,12 +20,14 @@ export function HomePage() {
   const urlSearchTerm = searchParams.get("q") ?? "";
 
   const [products, setProducts] = useState<Product[]>([]);
+  const [favoriteProductIds, setFavoriteProductIds] = useState<Set<number>>(
+    () => new Set(),
+  );
   const [searchTerm, setSearchTerm] = useState(urlSearchTerm);
 
   const [isLoading, setIsLoading] = useState(true);
-  const [favoriteProductId, setFavoriteProductId] = useState<number | null>(
-    null,
-  );
+  const [togglingFavoriteProductId, setTogglingFavoriteProductId] =
+    useState<number | null>(null);
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -72,6 +78,39 @@ export function HomePage() {
   }, [categorySlug]);
 
   useEffect(() => {
+    let ignore = false;
+
+    async function loadFavoriteIds() {
+      const token = getCustomerToken();
+
+      if (!token) {
+        setFavoriteProductIds(new Set());
+        return;
+      }
+
+      try {
+        const favorites = await getMyFavorites();
+
+        if (!ignore) {
+          setFavoriteProductIds(
+            new Set(favorites.map((favorite) => favorite.productId)),
+          );
+        }
+      } catch {
+        if (!ignore) {
+          setFavoriteProductIds(new Set());
+        }
+      }
+    }
+
+    loadFavoriteIds();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!toastMessage) {
       return;
     }
@@ -120,7 +159,7 @@ export function HomePage() {
     setSearchParams(nextParams);
   }
 
-  async function handleAddFavorite(product: Product) {
+  async function handleToggleFavorite(product: Product) {
     if (!getCustomerToken()) {
       navigate("/login", {
         state: {
@@ -131,24 +170,47 @@ export function HomePage() {
       return;
     }
 
+    const isAlreadyFavorite = favoriteProductIds.has(product.id);
+
     try {
-      setFavoriteProductId(product.id);
+      setTogglingFavoriteProductId(product.id);
       setToastMessage(null);
 
-      await addFavorite(product.id);
+      if (isAlreadyFavorite) {
+        await removeFavorite(product.id);
 
-      setToastVariant("success");
-      setToastMessage(`${product.nombre} fue agregado a favoritos.`);
+        setFavoriteProductIds((current) => {
+          const next = new Set(current);
+          next.delete(product.id);
+          return next;
+        });
+
+        setToastVariant("success");
+        setToastMessage(`${product.nombre} fue quitado de favoritos.`);
+      } else {
+        await addFavorite(product.id);
+
+        setFavoriteProductIds((current) => {
+          const next = new Set(current);
+          next.add(product.id);
+          return next;
+        });
+
+        setToastVariant("success");
+        setToastMessage(`${product.nombre} fue agregado a favoritos.`);
+      }
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
-          : "No fue posible agregar el producto a favoritos.";
+          : isAlreadyFavorite
+            ? "No fue posible quitar el producto de favoritos."
+            : "No fue posible agregar el producto a favoritos.";
 
       setToastVariant("error");
       setToastMessage(message);
     } finally {
-      setFavoriteProductId(null);
+      setTogglingFavoriteProductId(null);
     }
   }
 
@@ -220,8 +282,9 @@ export function HomePage() {
               <ProductCard
                 key={product.id}
                 product={product}
-                isAddingFavorite={favoriteProductId === product.id}
-                onAddFavorite={handleAddFavorite}
+                isFavorite={favoriteProductIds.has(product.id)}
+                isTogglingFavorite={togglingFavoriteProductId === product.id}
+                onToggleFavorite={handleToggleFavorite}
               />
             ))}
           </div>

@@ -3,8 +3,9 @@ import type { Product } from "../types/product";
 
 type ProductCardProps = {
   product: Product;
-  isAddingFavorite?: boolean;
-  onAddFavorite?: (product: Product) => void;
+  isFavorite: boolean;
+  isTogglingFavorite?: boolean;
+  onToggleFavorite?: (product: Product) => void;
 };
 
 const currencyFormatter = new Intl.NumberFormat("es-CO", {
@@ -15,8 +16,9 @@ const currencyFormatter = new Intl.NumberFormat("es-CO", {
 
 export function ProductCard({
   product,
-  isAddingFavorite = false,
-  onAddFavorite,
+  isFavorite,
+  isTogglingFavorite = false,
+  onToggleFavorite,
 }: ProductCardProps) {
   return (
     <article className="product-card">
@@ -52,13 +54,23 @@ export function ProductCard({
           </Link>
 
           <button
-            className="product-card__favorite"
+            className={
+              isFavorite
+                ? "product-card__favorite product-card__favorite--active"
+                : "product-card__favorite"
+            }
             type="button"
-            aria-label={`Agregar ${product.nombre} a favoritos`}
-            disabled={isAddingFavorite}
-            onClick={() => onAddFavorite?.(product)}
+            aria-pressed={isFavorite}
+            aria-label={
+              isFavorite
+                ? `Quitar ${product.nombre} de favoritos`
+                : `Agregar ${product.nombre} a favoritos`
+            }
+            title={isFavorite ? "Quitar de favoritos" : "Agregar a favoritos"}
+            disabled={isTogglingFavorite}
+            onClick={() => onToggleFavorite?.(product)}
           >
-            {isAddingFavorite ? "…" : "♡"}
+            {isTogglingFavorite ? "…" : isFavorite ? "♥" : "♡"}
           </button>
         </div>
       </div>

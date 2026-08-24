@@ -5,7 +5,7 @@ export type FavoriteProduct = {
   productId: number;
   nombre: string;
   precio: number;
-  descripcion: string;
+  descripcion: string | null;
   slug: string;
   activo: boolean;
   marca: string | null;
