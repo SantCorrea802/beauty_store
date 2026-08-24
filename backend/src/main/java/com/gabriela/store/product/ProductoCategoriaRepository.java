@@ -11,6 +11,10 @@ public interface ProductoCategoriaRepository extends JpaRepository<ProductoCateg
 
     boolean existsByProducto_IdProductoAndCategoria_IdCategoria(Long idProducto, Long idCategoria);
 
+
+
+    boolean existsByCategoria_IdCategoria(Long idCategoria);
+
     List<ProductoCategoria> findByProducto_IdProducto(Long idProducto);
     //Objetivo: para actualizar categorías, la estrategia simple será:
     //

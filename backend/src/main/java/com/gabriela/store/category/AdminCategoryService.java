@@ -8,6 +8,7 @@ import com.gabriela.store.common.exception.NotFoundException;
 import com.gabriela.store.common.text.SlugUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.gabriela.store.product.ProductoCategoriaRepository;
 
 import java.util.List;
 
@@ -15,9 +16,14 @@ import java.util.List;
 public class AdminCategoryService {
 
     private final CategoriaRepository categoriaRepository;
+    private final ProductoCategoriaRepository productoCategoriaRepository;
 
-    public AdminCategoryService(CategoriaRepository categoriaRepository) {
+    public AdminCategoryService(
+            CategoriaRepository categoriaRepository,
+            ProductoCategoriaRepository productoCategoriaRepository
+    ) {
         this.categoriaRepository = categoriaRepository;
+        this.productoCategoriaRepository = productoCategoriaRepository;
     }
 
     // Aqui se podrían agregar métodos adicionales para funcionalidades específicas del administrador, como activar/desactivar categorías, etc.
@@ -79,6 +85,13 @@ public class AdminCategoryService {
     public void delete(Long idCategoria) {
         Categoria categoria = categoriaRepository.findById(idCategoria)
                 .orElseThrow(() -> new NotFoundException("Categoría no encontrada con id: " + idCategoria));
+
+        if (productoCategoriaRepository.existsByCategoria_IdCategoria(idCategoria)) {
+            throw new BadRequestException(
+                    "No se puede eliminar la categoría porque tiene productos asociados. " +
+                            "Primero reasigna o elimina la categoría de esos productos."
+            );
+        }
 
         categoriaRepository.delete(categoria);
     }
