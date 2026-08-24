@@ -3053,3 +3053,207 @@ img {
   border: 1px solid rgba(116, 64, 128, 0.24);
   background: rgba(116, 64, 128, 0.08);
 }
+
+/* ================================
+   Brand logo cleanup
+   ================================ */
+
+.app-header__top {
+  grid-template-columns: 72px minmax(240px, 1fr) auto;
+}
+
+.brand {
+  width: 64px;
+  gap: 0;
+  text-decoration: none;
+}
+
+.brand__logo {
+  width: 58px;
+  height: 58px;
+  display: block;
+  object-fit: contain;
+  border-radius: 50%;
+  background: transparent;
+  mix-blend-mode: multiply;
+}
+
+.brand__fallback {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .app-header__top {
+    grid-template-columns: auto 1fr;
+  }
+
+  .brand {
+    width: auto;
+  }
+}
+
+/* ================================
+   Mobile categories dropdown hardening
+   ================================ */
+
+.nav-dropdown,
+.nav-dropdown__trigger {
+  touch-action: manipulation;
+}
+
+@media (max-width: 700px) {
+  .app-header__nav {
+    position: relative;
+    z-index: 1250;
+  }
+
+  .nav-dropdown {
+    position: static;
+    z-index: 1300;
+  }
+
+  .nav-dropdown__trigger {
+    position: relative;
+    z-index: 1301;
+    pointer-events: auto;
+  }
+
+  .nav-dropdown__menu {
+    position: fixed;
+    top: 104px;
+    left: 12px;
+    right: 12px;
+    z-index: 1400;
+    width: auto;
+    max-width: none;
+    max-height: min(62vh, 420px);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .app-header.app-header--compact .nav-dropdown__menu {
+    top: 88px;
+  }
+}
+
+/* ================================
+   Mobile admin layout hardening
+   ================================ */
+
+@media (max-width: 700px) {
+  html,
+  body,
+  #root,
+  .app-shell,
+  .app-content {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .page {
+    width: 100%;
+    max-width: none;
+    padding: 18px 12px 64px;
+  }
+
+  .admin-page {
+    display: grid;
+    gap: 18px;
+  }
+
+  .admin-hero,
+  .admin-toolbar,
+  .admin-table-card,
+  .admin-form-card,
+  .admin-images-card,
+  .admin-audit-card {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 18px;
+    overflow: hidden;
+  }
+
+  .admin-hero h1 {
+    font-size: clamp(28px, 9vw, 36px);
+  }
+
+  .admin-images-card__header {
+    flex-direction: column;
+  }
+
+  .admin-product-form,
+  .admin-form-grid,
+  .form-field,
+  .form-field input,
+  .form-field textarea,
+  .form-field select {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  input[type="file"] {
+    width: 100%;
+    max-width: 100%;
+    font-size: 12px;
+  }
+
+  .admin-form-actions,
+  .admin-row-actions {
+    width: 100%;
+  }
+
+  .admin-form-actions .primary-button,
+  .admin-form-actions .secondary-button,
+  .admin-images-card .primary-button,
+  .admin-images-card .secondary-button {
+    width: 100%;
+  }
+}
+/* ================================
+   Mobile categories dropdown anchored
+   ================================ */
+
+@media (max-width: 700px) {
+  .app-header,
+  .app-header__nav {
+    overflow: visible;
+  }
+
+  .app-header__nav {
+    position: relative;
+    z-index: 1250;
+  }
+
+  .nav-dropdown {
+    position: relative;
+    z-index: 1300;
+  }
+
+  .nav-dropdown__trigger {
+    position: relative;
+    z-index: 1301;
+  }
+
+  .nav-dropdown__menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: auto;
+
+    width: min(300px, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
+    max-height: min(62vh, 420px);
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    z-index: 1500;
+    transform: none;
+  }
+
+  .app-header.app-header--compact .nav-dropdown__menu {
+    top: calc(100% + 8px);
+  }
+}

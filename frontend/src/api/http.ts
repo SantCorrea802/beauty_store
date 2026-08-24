@@ -1,6 +1,10 @@
 import { getAdminToken, removeAdminToken } from "../admin/adminAuthStorage";
 import { dispatchAdminSessionExpired } from "../admin/adminSessionEvents";
-import { getCustomerToken } from "../auth/authStorage";
+import {
+  getCustomerToken,
+  removeCustomerToken,
+} from "../auth/authStorage";
+import { dispatchCustomerSessionExpired } from "../auth/customerSessionEvents";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -86,11 +90,29 @@ export async function apiRequest<T>(
   const body = hasJson ? await response.json() : null;
 
   if (!response.ok) {
-    if (
-      authenticated &&
-      authMode === "admin" &&
-      (response.status === 401 || response.status === 403)
-    ) {
+    if (authenticated && response.status === 401) {
+      if (authMode === "admin") {
+        removeAdminToken();
+        dispatchAdminSessionExpired();
+
+        throw new ApiError(
+          "Tu sesión de administrador expiró. Inicia sesión nuevamente.",
+          response.status,
+          body,
+        );
+      }
+
+      removeCustomerToken();
+      dispatchCustomerSessionExpired();
+
+      throw new ApiError(
+        "Tu sesión expiró. Inicia sesión nuevamente.",
+        response.status,
+        body,
+      );
+    }
+
+    if (authenticated && authMode === "admin" && response.status === 403) {
       removeAdminToken();
       dispatchAdminSessionExpired();
 

@@ -28,11 +28,13 @@ import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
 import { AdminUserCreatePage } from "./pages/admin/AdminUserCreatePage";
 import { AdminAcceptInvitationPage } from "./pages/admin/AdminAcceptInvitationPage";
 import { AdminSessionWatcher } from "./admin/AdminSessionWatcher";
+import { CustomerSessionWatcher } from "./auth/CustomerSessionWatcher";
 
 function App() {
   return (
     <div className="app-shell">
       <AdminSessionWatcher />
+      <CustomerSessionWatcher />
       <AppHeader />
 
       <div className="app-content">

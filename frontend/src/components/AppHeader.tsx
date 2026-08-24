@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { FormEvent, MouseEvent } from "react";
+import type { FormEvent, MouseEvent, PointerEvent as ReactPointerEvent } from "react";
 import {
   Link,
   useLocation,
@@ -36,6 +36,7 @@ export function AppHeader() {
 
   const categoriesMenuRef = useRef<HTMLDivElement | null>(null);
   const isHeaderCompactRef = useRef(false);
+  const touchToggleHandledRef = useRef(false);
 
   const [searchTerm, setSearchTerm] = useState(currentQuery);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -182,6 +183,38 @@ export function AppHeader() {
     setIsCategoriesOpen(false);
   }
 
+  function toggleCategoriesMenu() {
+    setIsCategoriesOpen((current) => !current);
+  }
+
+  function handleCategoriesPointerDown(
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) {
+    if (event.pointerType !== "touch") {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    touchToggleHandledRef.current = true;
+    toggleCategoriesMenu();
+
+    window.setTimeout(() => {
+      touchToggleHandledRef.current = false;
+    }, 350);
+  }
+
+  function handleCategoriesClick() {
+    if (touchToggleHandledRef.current) {
+      return;
+    }
+
+    toggleCategoriesMenu();
+  }
+
+  const isAdminArea = location.pathname.startsWith("/admin");
+
   return (
     <header
       className={
@@ -198,7 +231,6 @@ export function AppHeader() {
               event.currentTarget.style.display = "none";
             }}
           />
-          <span className="brand__fallback">H</span>
         </Link>
 
         <form className="search" role="search" onSubmit={handleSearchSubmit}>
@@ -256,7 +288,12 @@ export function AppHeader() {
             <CartIcon className="icon-button__icon" />
           </Link>
 
-          <Link className="icon-button" to="/me" aria-label="Cuenta">
+          <Link
+            className="icon-button"
+            to={isAdminArea ? "/admin" : "/me"}
+            aria-label={isAdminArea ? "Panel admin" : "Cuenta"}
+            title={isAdminArea ? "Panel admin" : "Mi cuenta"}
+          >
             <UserIcon className="icon-button__icon" />
           </Link>
         </nav>
@@ -273,7 +310,8 @@ export function AppHeader() {
             type="button"
             aria-expanded={isCategoriesOpen}
             aria-controls="categories-navigation-menu"
-            onClick={() => setIsCategoriesOpen((current) => !current)}
+            onPointerDown={handleCategoriesPointerDown}
+            onClick={handleCategoriesClick}
           >
             CATEGORÍAS <ChevronDownIcon className="nav-dropdown__chevron" />
           </button>
