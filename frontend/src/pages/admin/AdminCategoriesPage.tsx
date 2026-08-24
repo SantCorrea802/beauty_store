@@ -5,6 +5,7 @@ import {
   getAdminCategories,
   type AdminCategory,
 } from "../../api/adminCategoriesApi";
+import { AdminAuditPanel } from "./AdminAuditPanel";
 
 export function AdminCategoriesPage() {
   const [categories, setCategories] = useState<AdminCategory[]>([]);
@@ -13,6 +14,7 @@ export function AdminCategoriesPage() {
   const [actionCategoryId, setActionCategoryId] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [auditReloadKey, setAuditReloadKey] = useState(0);
 
   const filteredCategories = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -70,6 +72,7 @@ export function AdminCategoriesPage() {
 
       setSuccessMessage("Categoría eliminada correctamente.");
       await loadCategories();
+      setAuditReloadKey((current) => current + 1);
     } catch (error) {
       const message =
         error instanceof Error
@@ -187,6 +190,15 @@ export function AdminCategoriesPage() {
           </div>
         </section>
       ) : null}
+      <AdminAuditPanel
+        title="Historial de categorías"
+        description="Creación, edición y eliminación de categorías del catálogo."
+        entityType="CATEGORY"
+        limit={20}
+        reloadKey={auditReloadKey}
+        emptyMessage="Todavía no hay eventos de categorías."
+      />
+
     </main>
   );
 }

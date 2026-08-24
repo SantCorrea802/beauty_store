@@ -6,6 +6,7 @@ import {
   getAdminUsers,
   type AdminUserResponse,
 } from "../../api/adminUsersApi";
+import { AdminAuditPanel } from "./AdminAuditPanel";
 
 export function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUserResponse[]>([]);
@@ -14,6 +15,7 @@ export function AdminUsersPage() {
   const [actionUserId, setActionUserId] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [auditReloadKey, setAuditReloadKey] = useState(0);
 
   const filteredUsers = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -79,6 +81,7 @@ export function AdminUsersPage() {
       }
 
       await loadUsers();
+      setAuditReloadKey((current) => current + 1);
     } catch (error) {
       const message =
         error instanceof Error
@@ -209,6 +212,14 @@ export function AdminUsersPage() {
           </div>
         </section>
       ) : null}
+      <AdminAuditPanel
+        title="Historial de usuarios admin"
+        description="Creación, activación y desactivación de cuentas administrativas."
+        entityType="ADMIN_USER"
+        limit={20}
+        reloadKey={auditReloadKey}
+        emptyMessage="Todavía no hay eventos de usuarios admin."
+      />
     </main>
   );
 }

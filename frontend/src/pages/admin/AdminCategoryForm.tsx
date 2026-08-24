@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { FormEvent } from "react";
+import type { FormEvent, ReactNode } from "react";
 
 type AdminCategoryFormProps = {
   eyebrow: string;
@@ -10,6 +10,7 @@ type AdminCategoryFormProps = {
   isSubmitting: boolean;
   errorMessage: string | null;
   successMessage?: string | null;
+  afterContent?: ReactNode;
   onCancel: () => void;
   onSubmit: (nombre: string) => Promise<void>;
 };
@@ -23,6 +24,7 @@ export function AdminCategoryForm({
   isSubmitting,
   errorMessage,
   successMessage,
+  afterContent,
   onCancel,
   onSubmit,
 }: AdminCategoryFormProps) {
@@ -125,6 +127,8 @@ export function AdminCategoryForm({
           </div>
         </form>
       </section>
+
+      {afterContent}
     </main>
   );
 }

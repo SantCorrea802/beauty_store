@@ -5,6 +5,7 @@ import {
   type AdminUserResponse,
 } from "../../api/adminUsersApi";
 import { removeAdminToken } from "../../admin/adminAuthStorage";
+import { AdminAuditPanel } from "./AdminAuditPanel";
 
 export function AdminDashboardPage() {
   const navigate = useNavigate();
@@ -142,6 +143,14 @@ export function AdminDashboardPage() {
             )}
           </article>
         </section>
+      ) : null}
+
+      {!isLoading && !errorMessage ? (
+        <AdminAuditPanel
+          title="Actividad administrativa reciente"
+          description="Últimas acciones registradas sobre categorías y usuarios admin."
+          limit={12}
+        />
       ) : null}
     </main>
   );

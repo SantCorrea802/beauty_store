@@ -6,6 +6,7 @@ import {
   type AdminCategory,
 } from "../../api/adminCategoriesApi";
 import { AdminCategoryForm } from "./AdminCategoryForm";
+import { AdminAuditPanel } from "./AdminAuditPanel";
 
 export function AdminCategoryEditPage() {
   const navigate = useNavigate();
@@ -13,7 +14,7 @@ export function AdminCategoryEditPage() {
 
   const categoryId = Number(params.id);
   const hasValidCategoryId = Number.isInteger(categoryId) && categoryId > 0;
-
+  const [auditReloadKey, setAuditReloadKey] = useState(0);
   const [categories, setCategories] = useState<AdminCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -83,6 +84,7 @@ export function AdminCategoryEditPage() {
         current.map((item) => (item.id === updated.id ? updated : item)),
       );
       setSuccessMessage("Categoría actualizada correctamente.");
+      setAuditReloadKey((current) => current + 1);
     } catch (error) {
       const message =
         error instanceof Error
@@ -151,6 +153,19 @@ export function AdminCategoryEditPage() {
       successMessage={successMessage}
       onCancel={() => navigate("/admin/categories")}
       onSubmit={handleSubmit}
+            afterContent={
+        hasValidCategoryId ? (
+          <AdminAuditPanel
+            title="Historial de esta categoría"
+            description="Cambios administrativos registrados sobre esta categoría."
+            entityType="CATEGORY"
+            entityId={categoryId}
+            limit={20}
+            reloadKey={auditReloadKey}
+            emptyMessage="Esta categoría todavía no tiene eventos de auditoría."
+          />
+        ) : null
+      }
     />
   );
 }
