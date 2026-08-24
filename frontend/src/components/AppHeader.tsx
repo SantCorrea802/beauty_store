@@ -1,6 +1,11 @@
-import { useEffect, useState } from "react";
-import type { FormEvent } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { FormEvent, MouseEvent } from "react";
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import { getCategories } from "../api/categoriesApi";
 import type { Category } from "../types/category";
 
@@ -10,18 +15,81 @@ const whatsappPublicUrl = import.meta.env.VITE_WHATSAPP_PUBLIC_URL as
 
 const instagramUrl = import.meta.env.VITE_INSTAGRAM_URL as string | undefined;
 
+const HEADER_CATEGORY_LIMIT = 8;
+
 export function AppHeader() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
 
   const currentQuery = searchParams.get("q") ?? "";
 
+  const categoriesMenuRef = useRef<HTMLDivElement | null>(null);
+
   const [searchTerm, setSearchTerm] = useState(currentQuery);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
+  const [isHeaderCompact, setIsHeaderCompact] = useState(false);
+
+  const isHeaderCompactRef = useRef(false);
+
+  const visibleCategories = useMemo(() => {
+    return categories.slice(0, HEADER_CATEGORY_LIMIT);
+  }, [categories]);
+
+  const hasMoreCategories = categories.length > visibleCategories.length;
 
   useEffect(() => {
     setSearchTerm(currentQuery);
   }, [currentQuery]);
+
+  useEffect(() => {
+    let animationFrameId = 0;
+
+    function setCompactMode(nextValue: boolean) {
+      if (isHeaderCompactRef.current === nextValue) {
+        return;
+      }
+
+      isHeaderCompactRef.current = nextValue;
+      setIsHeaderCompact(nextValue);
+    }
+
+    function updateHeaderState() {
+      const scrollY = window.scrollY;
+
+      /*
+        Umbrales con histéresis fuerte:
+
+        - Compacta solo después de bajar bastante.
+        - Expande solo al volver prácticamente al inicio.
+
+        Esto evita el bucle causado por cambios de altura del header.
+      */
+      if (!isHeaderCompactRef.current && scrollY > 90) {
+        setCompactMode(true);
+        return;
+      }
+
+      if (isHeaderCompactRef.current && scrollY <= 4) {
+        setCompactMode(false);
+      }
+    }
+
+    function handleScroll() {
+      window.cancelAnimationFrame(animationFrameId);
+      animationFrameId = window.requestAnimationFrame(updateHeaderState);
+    }
+
+    updateHeaderState();
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId);
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
 
   useEffect(() => {
     let ignore = false;
@@ -47,6 +115,42 @@ export function AppHeader() {
     };
   }, []);
 
+  useEffect(() => {
+    setIsCategoriesOpen(false);
+  }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    if (!isCategoriesOpen) {
+      return;
+    }
+
+    function handleDocumentPointerDown(event: PointerEvent) {
+      const target = event.target;
+
+      if (!(target instanceof Node)) {
+        return;
+      }
+
+      if (!categoriesMenuRef.current?.contains(target)) {
+        setIsCategoriesOpen(false);
+      }
+    }
+
+    function handleDocumentKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsCategoriesOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handleDocumentPointerDown);
+    document.addEventListener("keydown", handleDocumentKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handleDocumentPointerDown);
+      document.removeEventListener("keydown", handleDocumentKeyDown);
+    };
+  }, [isCategoriesOpen]);
+
   function handleSearchSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -60,12 +164,16 @@ export function AppHeader() {
     navigate(`/?q=${encodeURIComponent(normalizedSearch)}`);
   }
 
-  function handleDisabledExternalLink(event: React.MouseEvent<HTMLAnchorElement>) {
+  function handleDisabledExternalLink(event: MouseEvent<HTMLAnchorElement>) {
     event.preventDefault();
   }
 
+  function closeCategoriesMenu() {
+    setIsCategoriesOpen(false);
+  }
+
   return (
-    <header className="app-header">
+    <header className={isHeaderCompact ? "app-header app-header--compact" : "app-header"}>
       <div className="app-header__top">
         <Link to="/" className="brand" aria-label="Ir al inicio">
           <img
@@ -76,7 +184,7 @@ export function AppHeader() {
               event.currentTarget.style.display = "none";
             }}
           />
-          <span className="brand__fallback">G</span>
+          <span className="brand__fallback">H</span>
         </Link>
 
         <form className="search" role="search" onSubmit={handleSearchSubmit}>
@@ -113,7 +221,9 @@ export function AppHeader() {
           </a>
 
           <a
-            className={`icon-button ${instagramUrl ? "" : "icon-button--disabled"}`}
+            className={`icon-button ${
+              instagramUrl ? "" : "icon-button--disabled"
+            }`}
             href={instagramUrl ?? "#"}
             target={instagramUrl ? "_blank" : undefined}
             rel={instagramUrl ? "noreferrer" : undefined}
@@ -143,33 +253,59 @@ export function AppHeader() {
       </div>
 
       <nav className="app-header__nav" aria-label="Navegación principal">
-        <details className="nav-dropdown">
-          <summary className="nav-link nav-link--active">
+        <div className="nav-dropdown" ref={categoriesMenuRef}>
+          <button
+            className="nav-link nav-link--active nav-dropdown__trigger"
+            type="button"
+            aria-expanded={isCategoriesOpen}
+            aria-controls="categories-navigation-menu"
+            onClick={() => setIsCategoriesOpen((current) => !current)}
+          >
             CATEGORÍAS <span aria-hidden="true">⌄</span>
-          </summary>
+          </button>
 
-          <div className="nav-dropdown__menu">
-            <Link className="nav-dropdown__item" to="/">
-              Todas las categorías
-            </Link>
+          {isCategoriesOpen ? (
+            <div
+              id="categories-navigation-menu"
+              className="nav-dropdown__menu"
+            >
+              <Link
+                className="nav-dropdown__item"
+                to="/"
+                onClick={closeCategoriesMenu}
+              >
+                Todas las categorías
+              </Link>
 
-            {categories.length > 0 ? (
-              categories.map((category) => (
+              {visibleCategories.length > 0 ? (
+                visibleCategories.map((category) => (
+                  <Link
+                    key={category.id}
+                    className="nav-dropdown__item"
+                    to={`/?category=${encodeURIComponent(category.slug)}`}
+                    onClick={closeCategoriesMenu}
+                  >
+                    {category.nombre}
+                  </Link>
+                ))
+              ) : (
+                <span className="nav-dropdown__empty">
+                  No hay categorías disponibles
+                </span>
+              )}
+
+              {hasMoreCategories ? (
                 <Link
-                  key={category.id}
-                  className="nav-dropdown__item"
-                  to={`/?category=${encodeURIComponent(category.slug)}`}
+                  className="nav-dropdown__item nav-dropdown__more"
+                  to="/categories"
+                  onClick={closeCategoriesMenu}
                 >
-                  {category.nombre}
+                  Ver todas las categorías
                 </Link>
-              ))
-            ) : (
-              <span className="nav-dropdown__empty">
-                No hay categorías disponibles
-              </span>
-            )}
-          </div>
-        </details>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
 
         <Link className="nav-link" to="/">
           CATÁLOGO

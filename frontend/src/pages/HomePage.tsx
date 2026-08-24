@@ -5,6 +5,7 @@ import { addFavorite } from "../api/favoritesApi";
 import { getProducts, getProductsByCategory } from "../api/productsApi";
 import { getCustomerToken } from "../auth/authStorage";
 import { ProductCard } from "../components/ProductCard";
+import { Toast } from "../components/Toast";
 import type { Product } from "../types/product";
 
 export function HomePage() {
@@ -18,8 +19,15 @@ export function HomePage() {
   const [searchTerm, setSearchTerm] = useState(urlSearchTerm);
 
   const [isLoading, setIsLoading] = useState(true);
+  const [favoriteProductId, setFavoriteProductId] = useState<number | null>(
+    null,
+  );
+
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastVariant, setToastVariant] = useState<"success" | "error">(
+    "success",
+  );
 
   useEffect(() => {
     setSearchTerm(urlSearchTerm);
@@ -32,7 +40,6 @@ export function HomePage() {
       try {
         setIsLoading(true);
         setErrorMessage(null);
-        setFeedbackMessage(null);
 
         const productsFromApi = categorySlug
           ? await getProductsByCategory(categorySlug)
@@ -64,6 +71,20 @@ export function HomePage() {
     };
   }, [categorySlug]);
 
+  useEffect(() => {
+    if (!toastMessage) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setToastMessage(null);
+    }, 2800);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [toastMessage]);
+
   const visibleProducts = useMemo(() => {
     const normalizedSearch = urlSearchTerm.trim().toLowerCase();
 
@@ -74,7 +95,7 @@ export function HomePage() {
     return products.filter((product) => {
       const searchableText = [
         product.nombre,
-        product.descripcion,
+        product.descripcion ?? "",
         product.marca ?? "",
       ]
         .join(" ")
@@ -103,7 +124,7 @@ export function HomePage() {
     if (!getCustomerToken()) {
       navigate("/login", {
         state: {
-          from: "/",
+          from: `/${searchParams.toString() ? `?${searchParams.toString()}` : ""}`,
           message: "Inicia sesión para guardar productos en favoritos.",
         },
       });
@@ -111,18 +132,23 @@ export function HomePage() {
     }
 
     try {
-      setFeedbackMessage(null);
+      setFavoriteProductId(product.id);
+      setToastMessage(null);
 
       await addFavorite(product.id);
 
-      setFeedbackMessage(`${product.nombre} fue agregado a favoritos.`);
+      setToastVariant("success");
+      setToastMessage(`${product.nombre} fue agregado a favoritos.`);
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
           : "No fue posible agregar el producto a favoritos.";
 
-      setFeedbackMessage(message);
+      setToastVariant("error");
+      setToastMessage(message);
+    } finally {
+      setFavoriteProductId(null);
     }
   }
 
@@ -188,22 +214,25 @@ export function HomePage() {
           </div>
         ) : null}
 
-        {feedbackMessage ? (
-          <div className="catalog-feedback">{feedbackMessage}</div>
-        ) : null}
-
         {!isLoading && !errorMessage && visibleProducts.length > 0 ? (
           <div className="product-grid">
             {visibleProducts.map((product) => (
               <ProductCard
                 key={product.id}
                 product={product}
+                isAddingFavorite={favoriteProductId === product.id}
                 onAddFavorite={handleAddFavorite}
               />
             ))}
           </div>
         ) : null}
       </section>
+
+      <Toast
+        message={toastMessage}
+        variant={toastVariant}
+        onClose={() => setToastMessage(null)}
+      />
     </main>
   );
 }

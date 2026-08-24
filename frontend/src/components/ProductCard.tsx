@@ -3,6 +3,7 @@ import type { Product } from "../types/product";
 
 type ProductCardProps = {
   product: Product;
+  isAddingFavorite?: boolean;
   onAddFavorite?: (product: Product) => void;
 };
 
@@ -12,7 +13,11 @@ const currencyFormatter = new Intl.NumberFormat("es-CO", {
   maximumFractionDigits: 0,
 });
 
-export function ProductCard({ product, onAddFavorite }: ProductCardProps) {
+export function ProductCard({
+  product,
+  isAddingFavorite = false,
+  onAddFavorite,
+}: ProductCardProps) {
   return (
     <article className="product-card">
       <div className="product-card__image-wrapper">
@@ -50,9 +55,10 @@ export function ProductCard({ product, onAddFavorite }: ProductCardProps) {
             className="product-card__favorite"
             type="button"
             aria-label={`Agregar ${product.nombre} a favoritos`}
+            disabled={isAddingFavorite}
             onClick={() => onAddFavorite?.(product)}
           >
-            ♡
+            {isAddingFavorite ? "…" : "♡"}
           </button>
         </div>
       </div>

@@ -23,6 +23,7 @@ import { AppFooter } from "./components/AppFooter";
 import { AdminCategoriesPage } from "./pages/admin/AdminCategoriesPage";
 import { AdminCategoryCreatePage } from "./pages/admin/AdminCategoryCreatePage";
 import { AdminCategoryEditPage } from "./pages/admin/AdminCategoryEditPage";
+import { CategoriesPage } from "./pages/CategoriesPage";
 
 function App() {
   return (
@@ -32,7 +33,9 @@ function App() {
       <div className="app-content">
         <Routes>
           <Route index element={<HomePage />} />
+          <Route path="categories" element={<CategoriesPage />} />
           <Route path="products/:slug" element={<ProductDetailPage />} />
+          
 
           <Route path="register" element={<CustomerRegisterPage />} />
           <Route path="verify-email" element={<VerifyEmailPage />} />
