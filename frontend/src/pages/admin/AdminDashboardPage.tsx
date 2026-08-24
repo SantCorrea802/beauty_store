@@ -114,6 +114,10 @@ export function AdminDashboardPage() {
               visibles para esta cuenta.
             </p>
 
+            <Link className="secondary-button admin-card__action" to="/admin/users">
+              Gestionar usuarios
+            </Link>
+
             {users.length > 0 ? (
               <div className="admin-user-list">
                 {users.slice(0, 5).map((user) => (

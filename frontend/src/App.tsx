@@ -24,6 +24,8 @@ import { AdminCategoriesPage } from "./pages/admin/AdminCategoriesPage";
 import { AdminCategoryCreatePage } from "./pages/admin/AdminCategoryCreatePage";
 import { AdminCategoryEditPage } from "./pages/admin/AdminCategoryEditPage";
 import { CategoriesPage } from "./pages/CategoriesPage";
+import { AdminUsersPage } from "./pages/admin/AdminUsersPage";
+import { AdminUserCreatePage } from "./pages/admin/AdminUserCreatePage";
 
 function App() {
   return (
@@ -152,6 +154,24 @@ function App() {
             element={
               <AdminProtectedRoute>
                 <AdminCategoryEditPage />
+              </AdminProtectedRoute>
+            }
+          />
+
+          <Route
+            path="admin/users"
+            element={
+              <AdminProtectedRoute>
+                <AdminUsersPage />
+              </AdminProtectedRoute>
+            }
+          />
+
+          <Route
+            path="admin/users/new"
+            element={
+              <AdminProtectedRoute>
+                <AdminUserCreatePage />
               </AdminProtectedRoute>
             }
           />
