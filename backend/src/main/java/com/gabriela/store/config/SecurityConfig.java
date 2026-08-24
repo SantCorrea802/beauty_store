@@ -33,6 +33,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/categories/**").permitAll()
                         .requestMatchers("/api/products/**").permitAll()
 
+                        .requestMatchers(HttpMethod.POST, "/api/auth/admin/invitations/accept").permitAll()
+
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/me", "/api/me/**").hasRole("CUSTOMER")
 

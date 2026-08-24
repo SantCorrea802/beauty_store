@@ -34,4 +34,16 @@ public class DevConsoleEmailSender implements EmailSender {
         System.out.println("==============================================");
         System.out.println();
     }
+
+    @Override
+    public void sendAdminInvitationEmail(String to, String name, String invitationUrl) {
+        System.out.println();
+        System.out.println("==============================================");
+        System.out.println("[DEV EMAIL] Invitación administrador");
+        System.out.println("Para: " + to);
+        System.out.println("Nombre: " + name);
+        System.out.println("Link: " + invitationUrl);
+        System.out.println("==============================================");
+        System.out.println();
+    }
 }

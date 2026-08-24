@@ -108,6 +108,44 @@ public class SmtpEmailSender implements EmailSender {
         sendHtmlEmail(to, subject, html);
     }
 
+    @Override
+    public void sendAdminInvitationEmail(String to, String name, String invitationUrl) {
+        String subject = "Invitación al panel admin - " + brandName;
+
+        String safeName = escapeHtml(name);
+        String safeBrandName = escapeHtml(brandName);
+        String safeInvitationUrl = escapeHtml(invitationUrl);
+
+        String html = """
+            <div style="font-family: Arial, sans-serif; color: %s; line-height: 1.6;">
+              <h2>Invitación al panel administrador</h2>
+              <p>Hola %s,</p>
+              <p>Has sido invitado/a a administrar <strong>%s</strong>.</p>
+              <p>Para aceptar la invitación y definir tu contraseña, haz clic en el siguiente botón:</p>
+              <p>
+                <a href="%s"
+                   style="display:inline-block;padding:12px 18px;background:%s;color:#ffffff;
+                          text-decoration:none;border-radius:999px;font-weight:bold;">
+                  Aceptar invitación
+                </a>
+              </p>
+              <p>Si el botón no funciona, copia y pega este enlace en tu navegador:</p>
+              <p><a href="%s">%s</a></p>
+              <p>Si no esperabas esta invitación, puedes ignorar este correo.</p>
+            </div>
+            """.formatted(
+                TEXT_COLOR,
+                safeName,
+                safeBrandName,
+                safeInvitationUrl,
+                BUTTON_BACKGROUND,
+                safeInvitationUrl,
+                safeInvitationUrl
+        );
+
+        sendHtmlEmail(to, subject, html);
+    }
+
     private void sendHtmlEmail(String to, String subject, String html) {
         try {
             MimeMessage message = mailSender.createMimeMessage();

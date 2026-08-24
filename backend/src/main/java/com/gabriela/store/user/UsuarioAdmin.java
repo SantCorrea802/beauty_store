@@ -35,6 +35,12 @@ public class UsuarioAdmin {
     @Column(name="activo", nullable = false)
     private boolean activo = true;
 
+    @Column(name = "email_verificado", nullable = false)
+    private boolean emailVerificado = true;
+
+    @Column(name = "fecha_email_verificado")
+    private OffsetDateTime fechaEmailVerificado;
+
     @Column(name="fecha_creacion", nullable = false)
     private OffsetDateTime fechaCreacion;
 
@@ -74,6 +80,9 @@ public class UsuarioAdmin {
         if (this.rol == null) {
             this.rol = AdminRole.ADMIN;
         }
+        if (this.emailVerificado && this.fechaEmailVerificado == null) {
+            this.fechaEmailVerificado = now;
+        }
     }
 
 
@@ -101,4 +110,29 @@ public class UsuarioAdmin {
         this.activo = false;
         return true;
     }
+    public static UsuarioAdmin crearInvitado(String email, String nombre, String disabledPassHash) {
+        UsuarioAdmin usuario = new UsuarioAdmin();
+
+        usuario.email = email;
+        usuario.nombre = nombre;
+        usuario.passHash = disabledPassHash;
+        usuario.rol = AdminRole.ADMIN;
+        usuario.activo = false;
+        usuario.emailVerificado = false;
+        usuario.fechaEmailVerificado = null;
+
+        return usuario;
+    }
+
+    public void actualizarNombre(String nombre) {
+        this.nombre = nombre;
+    }
+
+    public void aceptarInvitacion(String passHash, OffsetDateTime acceptedAt) {
+        this.passHash = passHash;
+        this.emailVerificado = true;
+        this.fechaEmailVerificado = acceptedAt;
+        this.activo = true;
+    }
+
 }

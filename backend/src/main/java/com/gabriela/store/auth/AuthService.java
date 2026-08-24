@@ -37,7 +37,8 @@ public class AuthService {
     }
 
     public LoginResponse login(LoginRequest request) {
-        UsuarioAdmin admin = usuarioAdminRepository.findByEmailAndActivoTrue(request.email().trim().toLowerCase())
+        UsuarioAdmin admin = usuarioAdminRepository
+                .findByEmailAndActivoTrueAndEmailVerificadoTrue(request.email().trim().toLowerCase())
                 .orElseThrow(() -> new BadRequestException("Credenciales inválidas."));
 
         if (!passwordEncoder.matches(request.password(), admin.getPassHash())) {
