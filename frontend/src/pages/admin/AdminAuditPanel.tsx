@@ -21,20 +21,30 @@ type AdminAuditPanelProps = {
   title: string;
   description: string;
   entityType?: string;
+  entityId?: number;
   limit?: number;
   reloadKey?: number;
   emptyMessage?: string;
 };
 
-function getAdminAuditLogs(
-  entityType: string | undefined,
-  limit: number,
-): Promise<AdminAuditLog[]> {
+function getAdminAuditLogs({
+  entityType,
+  entityId,
+  limit,
+}: {
+  entityType?: string;
+  entityId?: number;
+  limit: number;
+}): Promise<AdminAuditLog[]> {
   if (entityType) {
     const searchParams = new URLSearchParams({
       entityType,
       limit: String(limit),
     });
+
+    if (entityId !== undefined) {
+      searchParams.set("entityId", String(entityId));
+    }
 
     return apiRequest<AdminAuditLog[]>(
       `/api/admin/audit/entity?${searchParams.toString()}`,
@@ -127,6 +137,7 @@ export function AdminAuditPanel({
   title,
   description,
   entityType,
+  entityId,
   limit = 20,
   reloadKey = 0,
   emptyMessage = "Todavía no hay eventos de auditoría.",
@@ -143,7 +154,11 @@ export function AdminAuditPanel({
         setIsLoading(true);
         setErrorMessage(null);
 
-        const response = await getAdminAuditLogs(entityType, limit);
+        const response = await getAdminAuditLogs({
+          entityType,
+          entityId,
+          limit,
+        });
 
         if (!ignore) {
           setLogs(response);
@@ -169,7 +184,7 @@ export function AdminAuditPanel({
     return () => {
       ignore = true;
     };
-  }, [entityType, limit, reloadKey]);
+  }, [entityType, entityId, limit, reloadKey]);
 
   return (
     <section className="admin-audit-card">

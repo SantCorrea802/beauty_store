@@ -1,6 +1,7 @@
 package com.gabriela.store.cart;
 
 import com.gabriela.store.product.Producto;
+import com.gabriela.store.product.ProductoVariante;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -11,15 +12,7 @@ import java.time.OffsetDateTime;
 
 @Getter
 @Entity
-@Table(
-        name = "carrito_item",
-        uniqueConstraints = {
-                @UniqueConstraint(
-                        name = "uq_carrito_item_carrito_producto",
-                        columnNames = {"id_carrito", "id_producto"}
-                )
-        }
-)
+@Table(name = "carrito_item")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CarritoItem {
 
@@ -36,6 +29,10 @@ public class CarritoItem {
     @JoinColumn(name = "id_producto", nullable = false)
     private Producto producto;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_variante")
+    private ProductoVariante variante;
+
     @Column(nullable = false)
     private Integer cantidad;
 
@@ -48,9 +45,25 @@ public class CarritoItem {
     @Column(name = "fecha_ultima_actualizacion", nullable = false)
     private OffsetDateTime fechaUltimaActualizacion;
 
-    public CarritoItem(Carrito carrito, Producto producto, Integer cantidad, BigDecimal precioUnitarioSnapshot) {
+    public CarritoItem(
+            Carrito carrito,
+            Producto producto,
+            Integer cantidad,
+            BigDecimal precioUnitarioSnapshot
+    ) {
+        this(carrito, producto, null, cantidad, precioUnitarioSnapshot);
+    }
+
+    public CarritoItem(
+            Carrito carrito,
+            Producto producto,
+            ProductoVariante variante,
+            Integer cantidad,
+            BigDecimal precioUnitarioSnapshot
+    ) {
         this.carrito = carrito;
         this.producto = producto;
+        this.variante = variante;
         this.cantidad = cantidad;
         this.precioUnitarioSnapshot = precioUnitarioSnapshot;
     }

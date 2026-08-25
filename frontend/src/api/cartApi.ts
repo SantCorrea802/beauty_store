@@ -3,6 +3,9 @@ import { apiRequest } from "./http";
 export type CartItem = {
   itemId: number;
   productId: number;
+  variantId: number | null;
+  variantNombre: string | null;
+  variantColorHex: string | null;
   nombre: string;
   slug: string;
   marca: string | null;
@@ -11,6 +14,7 @@ export type CartItem = {
   quantity: number;
   subtotal: number;
 };
+
 
 export type Cart = {
   cartId: number | null;
@@ -23,6 +27,7 @@ export type Cart = {
 
 export type AddCartItemRequest = {
   productId: number;
+  variantId?: number | null;
   quantity: number;
 };
 

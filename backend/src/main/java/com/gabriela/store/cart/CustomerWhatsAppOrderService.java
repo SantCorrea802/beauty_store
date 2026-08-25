@@ -5,6 +5,7 @@ import com.gabriela.store.common.exception.BadRequestException;
 import com.gabriela.store.customer.Cliente;
 import com.gabriela.store.customer.CurrentCustomerService;
 import com.gabriela.store.product.Producto;
+import com.gabriela.store.product.ProductoVariante;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,7 +54,7 @@ public class CustomerWhatsAppOrderService {
             throw new BadRequestException("El carrito está vacío.");
         }
 
-        validateProductsAreAvailable(items);
+        validateItemsAreAvailable(items);
 
         String normalizedPhone = normalizeBusinessWhatsAppNumber(businessWhatsAppNumber);
         BigDecimal total = calculateTotal(items);
@@ -70,16 +71,25 @@ public class CustomerWhatsAppOrderService {
         );
     }
 
-    private void validateProductsAreAvailable(List<CarritoItem> items) {
-        List<String> unavailableProducts = items.stream()
-                .map(CarritoItem::getProducto)
-                .filter(producto -> !producto.isActivo())
-                .map(Producto::getNombreProducto)
+    private void validateItemsAreAvailable(List<CarritoItem> items) {
+        List<String> unavailableItems = items.stream()
+                .filter(item -> !item.getProducto().isActivo()
+                        || (item.getVariante() != null && !item.getVariante().isActivo()))
+                .map(item -> {
+                    Producto producto = item.getProducto();
+                    ProductoVariante variante = item.getVariante();
+
+                    if (variante == null) {
+                        return producto.getNombreProducto();
+                    }
+
+                    return producto.getNombreProducto() + " - " + variante.getNombre();
+                })
                 .toList();
 
-        if (!unavailableProducts.isEmpty()) {
+        if (!unavailableItems.isEmpty()) {
             throw new BadRequestException(
-                    "El carrito contiene productos no disponibles: " + String.join(", ", unavailableProducts)
+                    "El carrito contiene productos o tonos no disponibles: " + String.join(", ", unavailableItems)
             );
         }
     }
@@ -113,8 +123,14 @@ public class CustomerWhatsAppOrderService {
         for (int i = 0; i < items.size(); i++) {
             CarritoItem item = items.get(i);
             Producto producto = item.getProducto();
+            ProductoVariante variante = item.getVariante();
 
             message.append(i + 1).append(". ").append(producto.getNombreProducto()).append("\n");
+
+            if (variante != null) {
+                message.append("   Tono: ").append(variante.getNombre()).append("\n");
+            }
+
             message.append("   Cantidad: ").append(item.getCantidad()).append("\n");
             message.append("   Precio unitario: ")
                     .append(currencyFormat.format(item.getPrecioUnitarioSnapshot()))

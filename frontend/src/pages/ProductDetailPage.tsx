@@ -226,6 +226,7 @@ export function ProductDetailPage() {
 
       await addCartItem({
         productId: product.id,
+        variantId: selectedVariant?.id ?? null,
         quantity,
       });
 

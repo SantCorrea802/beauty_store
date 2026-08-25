@@ -4,6 +4,7 @@ import com.gabriela.store.cart.dto.AddCartItemRequest;
 import com.gabriela.store.cart.dto.CartItemResponse;
 import com.gabriela.store.cart.dto.CartResponse;
 import com.gabriela.store.cart.dto.UpdateCartItemQuantityRequest;
+import com.gabriela.store.common.exception.BadRequestException;
 import com.gabriela.store.common.exception.NotFoundException;
 import com.gabriela.store.customer.Cliente;
 import com.gabriela.store.customer.CurrentCustomerService;
@@ -11,11 +12,14 @@ import com.gabriela.store.image.ImagenProducto;
 import com.gabriela.store.image.ImagenProductoRepository;
 import com.gabriela.store.product.Producto;
 import com.gabriela.store.product.ProductoRepository;
+import com.gabriela.store.product.ProductoVariante;
+import com.gabriela.store.product.ProductoVarianteRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class CustomerCartService {
@@ -24,6 +28,7 @@ public class CustomerCartService {
     private final CarritoRepository carritoRepository;
     private final CarritoItemRepository carritoItemRepository;
     private final ProductoRepository productoRepository;
+    private final ProductoVarianteRepository productoVarianteRepository;
     private final ImagenProductoRepository imagenProductoRepository;
 
     public CustomerCartService(
@@ -31,12 +36,14 @@ public class CustomerCartService {
             CarritoRepository carritoRepository,
             CarritoItemRepository carritoItemRepository,
             ProductoRepository productoRepository,
+            ProductoVarianteRepository productoVarianteRepository,
             ImagenProductoRepository imagenProductoRepository
     ) {
         this.currentCustomerService = currentCustomerService;
         this.carritoRepository = carritoRepository;
         this.carritoItemRepository = carritoItemRepository;
         this.productoRepository = productoRepository;
+        this.productoVarianteRepository = productoVarianteRepository;
         this.imagenProductoRepository = imagenProductoRepository;
     }
 
@@ -61,25 +68,39 @@ public class CustomerCartService {
 
         Producto producto = productoRepository.findById(request.productId())
                 .filter(Producto::isActivo)
-                .orElseThrow(() -> new NotFoundException("Producto no encontrado o no disponible: " + request.productId()));
+                .orElseThrow(() -> new NotFoundException(
+                        "Producto no encontrado o no disponible: " + request.productId()
+                ));
+
+        ProductoVariante variante = resolveVariant(producto, request.variantId());
 
         Carrito carrito = getOrCreateActiveCart(cliente);
 
-        carritoItemRepository
-                .findByCarrito_IdCarritoAndProducto_IdProducto(carrito.getIdCarrito(), producto.getIdProducto())
-                .ifPresentOrElse(
-                        item -> item.aumentarCantidad(request.quantity()),
-                        () -> {
-                            CarritoItem item = new CarritoItem(
-                                    carrito,
-                                    producto,
-                                    request.quantity(),
-                                    producto.getPrecio()
-                            );
+        Optional<CarritoItem> existingItem = variante == null
+                ? carritoItemRepository.findByCarrito_IdCarritoAndProducto_IdProductoAndVarianteIsNull(
+                carrito.getIdCarrito(),
+                producto.getIdProducto()
+        )
+                : carritoItemRepository.findByCarrito_IdCarritoAndProducto_IdProductoAndVariante_IdVariante(
+                carrito.getIdCarrito(),
+                producto.getIdProducto(),
+                variante.getIdVariante()
+        );
 
-                            carritoItemRepository.save(item);
-                        }
-                );
+        existingItem.ifPresentOrElse(
+                item -> item.aumentarCantidad(request.quantity()),
+                () -> {
+                    CarritoItem item = new CarritoItem(
+                            carrito,
+                            producto,
+                            variante,
+                            request.quantity(),
+                            producto.getPrecio()
+                    );
+
+                    carritoItemRepository.save(item);
+                }
+        );
 
         return toResponse(carrito);
     }
@@ -116,6 +137,30 @@ public class CustomerCartService {
         Carrito carrito = getExistingActiveCart(cliente);
 
         carritoItemRepository.deleteByCarrito_IdCarrito(carrito.getIdCarrito());
+    }
+
+    private ProductoVariante resolveVariant(Producto producto, Long variantId) {
+        boolean productHasActiveVariants = productoVarianteRepository
+                .existsByProducto_IdProductoAndActivoTrue(producto.getIdProducto());
+
+        if (!productHasActiveVariants && variantId == null) {
+            return null;
+        }
+
+        if (productHasActiveVariants && variantId == null) {
+            throw new BadRequestException("Selecciona un tono para este producto.");
+        }
+
+        if (!productHasActiveVariants) {
+            throw new BadRequestException("Este producto no tiene tonos seleccionables.");
+        }
+
+        return productoVarianteRepository.findById(variantId)
+                .filter(ProductoVariante::isActivo)
+                .filter(variante -> variante.getProducto().getIdProducto().equals(producto.getIdProducto()))
+                .orElseThrow(() -> new BadRequestException(
+                        "El tono seleccionado no pertenece al producto o no está disponible."
+                ));
     }
 
     private Carrito getOrCreateActiveCart(Cliente cliente) {
@@ -157,6 +202,7 @@ public class CustomerCartService {
 
     private CartItemResponse toItemResponse(CarritoItem item) {
         Producto producto = item.getProducto();
+        ProductoVariante variante = item.getVariante();
 
         String imagenPrincipalUrl = imagenProductoRepository
                 .findByProducto_IdProductoAndPrincipalTrue(producto.getIdProducto())
@@ -166,6 +212,9 @@ public class CustomerCartService {
         return new CartItemResponse(
                 item.getIdCarritoItem(),
                 producto.getIdProducto(),
+                variante != null ? variante.getIdVariante() : null,
+                variante != null ? variante.getNombre() : null,
+                variante != null ? variante.getColorHex() : null,
                 producto.getNombreProducto(),
                 producto.getSlug(),
                 producto.getMarca(),

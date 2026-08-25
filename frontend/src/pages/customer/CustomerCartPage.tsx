@@ -292,6 +292,20 @@ export function CustomerCartPage() {
 
                     <h2>{item.nombre}</h2>
 
+                    {item.variantNombre ? (
+                      <div className="cart-item__variant">
+                        {item.variantColorHex ? (
+                          <span
+                            className="cart-item__variant-swatch"
+                            style={{ backgroundColor: item.variantColorHex }}
+                            aria-hidden="true"
+                          />
+                        ) : null}
+
+                        <span>Tono: {item.variantNombre}</span>
+                      </div>
+                    ) : null}
+
                     <p className="cart-item__price">
                       {currencyFormatter.format(item.precioUnitarioSnapshot)}
                     </p>
