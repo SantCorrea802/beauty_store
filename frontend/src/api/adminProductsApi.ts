@@ -9,6 +9,8 @@ export type AdminProduct = {
   activo: boolean;
   marca: string | null;
   imagenPrincipalUrl: string | null;
+  imagenes: AdminProductImage[];
+  variantes: AdminProductVariant[];
 };
 
 export type AdminProductDetail = AdminProduct & {
@@ -24,6 +26,20 @@ export type AdminProductDetail = AdminProduct & {
     principal: boolean;
     orden: number;
   }>;
+};
+
+export type AdminProductVariant = {
+  id: number;
+  nombre: string;
+  colorHex: string;
+  orden: number;
+  activo: boolean;
+};
+
+export type AdminProductVariantRequest = {
+  id?: number;
+  nombre: string;
+  colorHex: string;
 };
 
 export function getAdminProducts(): Promise<AdminProduct[]> {
@@ -74,6 +90,7 @@ export type AdminProductUpsertRequest = {
   descripcion: string | null;
   marca: string | null;
   categoriaIds: number[];
+  variantes?: AdminProductVariantRequest[];
 };
 
 export function createAdminProduct(

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { addCartItem } from "../api/cartApi";
 import {
@@ -22,6 +22,9 @@ export function ProductDetailPage() {
 
   const [product, setProduct] = useState<ProductDetail | null>(null);
   const [selectedImageId, setSelectedImageId] = useState<number | null>(null);
+  const [selectedVariantId, setSelectedVariantId] = useState<number | null>(
+    null,
+  );
   const [quantity, setQuantity] = useState(1);
 
   const [isFavorite, setIsFavorite] = useState(false);
@@ -57,6 +60,7 @@ export function ProductDetailPage() {
         if (!ignore) {
           setProduct(productFromApi);
           setSelectedImageId(null);
+          setSelectedVariantId(null);
           setIsFavorite(false);
         }
       } catch (error) {
@@ -123,6 +127,28 @@ export function ProductDetailPage() {
     };
   }, [product]);
 
+  const orderedImages = useMemo(() => {
+    return [...(product?.imagenes ?? [])].sort((a, b) => a.orden - b.orden);
+  }, [product]);
+
+  const activeVariants = useMemo(() => {
+    return [...(product?.variantes ?? [])]
+      .filter((variant) => variant.activo)
+      .sort((a, b) => a.orden - b.orden);
+  }, [product]);
+
+  const hasVariants = activeVariants.length > 0;
+
+  const selectedVariant =
+    activeVariants.find((variant) => variant.id === selectedVariantId) ?? null;
+
+  const defaultMainImage =
+    orderedImages.find((image) => image.principal) ?? orderedImages[0] ?? null;
+
+  const selectedImage =
+    orderedImages.find((image) => image.id === selectedImageId) ??
+    defaultMainImage;
+
   function redirectToLogin(message: string) {
     if (!product) {
       return;
@@ -188,6 +214,12 @@ export function ProductDetailPage() {
       return;
     }
 
+    if (hasVariants && !selectedVariant) {
+      setFeedbackVariant("error");
+      setFeedbackMessage("Selecciona un tono antes de agregar el producto.");
+      return;
+    }
+
     try {
       setIsAddingCart(true);
       setFeedbackMessage(null);
@@ -198,7 +230,11 @@ export function ProductDetailPage() {
       });
 
       setFeedbackVariant("success");
-      setFeedbackMessage(`${product.nombre} fue agregado al carrito.`);
+      setFeedbackMessage(
+        selectedVariant
+          ? `${product.nombre} (${selectedVariant.nombre}) fue agregado al carrito.`
+          : `${product.nombre} fue agregado al carrito.`,
+      );
     } catch (error) {
       const message =
         error instanceof Error
@@ -234,17 +270,6 @@ export function ProductDetailPage() {
     );
   }
 
-  const orderedImages = [...product.imagenes].sort(
-    (a, b) => a.orden - b.orden,
-  );
-
-  const defaultMainImage =
-    orderedImages.find((image) => image.principal) ?? orderedImages[0] ?? null;
-
-  const selectedImage =
-    orderedImages.find((image) => image.id === selectedImageId) ??
-    defaultMainImage;
-
   return (
     <main className="page">
       <Link className="back-link" to="/">
@@ -275,7 +300,9 @@ export function ProductDetailPage() {
                   }
                   type="button"
                   onClick={() => setSelectedImageId(image.id)}
-                  aria-label={`Ver imagen ${image.orden + 1} de ${product.nombre}`}
+                  aria-label={`Ver imagen ${image.orden + 1} de ${
+                    product.nombre
+                  }`}
                 >
                   <img
                     className="product-detail__thumbnail"
@@ -307,6 +334,52 @@ export function ProductDetailPage() {
             <h2>Descripción</h2>
             <p>{product.descripcion || "Este producto no tiene descripción."}</p>
           </div>
+
+          {hasVariants ? (
+            <section className="product-variants">
+              <div className="product-variants__header">
+                <h2>Selecciona un tono</h2>
+
+                {selectedVariant ? (
+                  <span>{selectedVariant.nombre}</span>
+                ) : (
+                  <span>Elige una opción</span>
+                )}
+              </div>
+
+              <div className="product-variants__list">
+                {activeVariants.map((variant) => {
+                  const isSelected = variant.id === selectedVariantId;
+
+                  return (
+                    <button
+                      key={variant.id}
+                      type="button"
+                      className={
+                        isSelected
+                          ? "product-variant-option product-variant-option--selected"
+                          : "product-variant-option"
+                      }
+                      onClick={() => {
+                        setSelectedVariantId(variant.id);
+                        setFeedbackMessage(null);
+                      }}
+                      aria-pressed={isSelected}
+                    >
+                      <span
+                        className="product-variant-option__swatch"
+                        style={{ backgroundColor: variant.colorHex }}
+                        aria-hidden="true"
+                      />
+                      <span className="product-variant-option__name">
+                        {variant.nombre}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
 
           <div className="quantity-control">
             <label htmlFor="product-quantity">Cantidad</label>
@@ -355,7 +428,10 @@ export function ProductDetailPage() {
                   : "♡ Agregar a favoritos"}
             </button>
 
-            <Link className="secondary-button auth-card__link-button" to="/me/cart">
+            <Link
+              className="secondary-button auth-card__link-button"
+              to="/me/cart"
+            >
               Ver carrito
             </Link>
           </div>

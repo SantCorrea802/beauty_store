@@ -18,7 +18,7 @@ import { AdminProductAuditPanel } from "./AdminProductAuditPanel";
 
 export function AdminProductEditPage() {
   const navigate = useNavigate();
-  const params = useParams<{ id: string }>();
+  const params = useParams();
 
   const productId = Number(params.id);
   const hasValidProductId = Number.isInteger(productId) && productId > 0;
@@ -28,33 +28,15 @@ export function AdminProductEditPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  const initialValues = useMemo<AdminProductFormValues>(() => {
-    if (!product) {
-      return {
-        nombre: "",
-        precio: "",
-        descripcion: "",
-        marca: "",
-        categoriaIds: [],
-      };
-    }
-
-    return {
-      nombre: product.nombre,
-      precio: String(product.precio),
-      descripcion: product.descripcion ?? "",
-      marca: product.marca ?? "",
-      categoriaIds: product.categorias.map((category) => category.id),
-    };
-  }, [product]);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [auditReloadKey, setAuditReloadKey] = useState(0);
 
   useEffect(() => {
     let ignore = false;
 
     async function loadData() {
       if (!hasValidProductId) {
-        setErrorMessage("ID de producto inválido.");
+        setErrorMessage("El identificador del producto no es válido.");
         setIsLoading(false);
         return;
       }
@@ -62,6 +44,7 @@ export function AdminProductEditPage() {
       try {
         setIsLoading(true);
         setErrorMessage(null);
+        setSuccessMessage(null);
 
         const [productResponse, categoriesResponse] = await Promise.all([
           getAdminProductById(productId),
@@ -95,19 +78,41 @@ export function AdminProductEditPage() {
     };
   }, [hasValidProductId, productId]);
 
+  const initialValues = useMemo<AdminProductFormValues>(() => {
+    return {
+      nombre: product?.nombre ?? "",
+      precio:
+        product?.precio !== undefined && product?.precio !== null
+          ? String(product.precio)
+          : "",
+      descripcion: product?.descripcion ?? "",
+      marca: product?.marca ?? "",
+      categoriaIds: product?.categorias.map((category) => category.id) ?? [],
+      variantes:
+        product?.variantes?.map((variant) => ({
+          id: variant.id,
+          nombre: variant.nombre,
+          colorHex: variant.colorHex,
+        })) ?? [],
+    };
+  }, [product]);
+
   async function handleSubmit(request: AdminProductUpsertRequest) {
     if (!hasValidProductId) {
-      setErrorMessage("ID de producto inválido.");
+      setErrorMessage("El identificador del producto no es válido.");
       return;
     }
 
     try {
       setIsSubmitting(true);
       setErrorMessage(null);
+      setSuccessMessage(null);
 
-      await updateAdminProduct(productId, request);
+      const updatedProduct = await updateAdminProduct(productId, request);
 
-      navigate("/admin/products", { replace: true });
+      setProduct(updatedProduct);
+      setSuccessMessage("Producto actualizado correctamente.");
+      setAuditReloadKey((current) => current + 1);
     } catch (error) {
       const message =
         error instanceof Error
@@ -131,15 +136,21 @@ export function AdminProductEditPage() {
   if (errorMessage && !product) {
     return (
       <main className="page admin-page">
-        <div className="form-message form-message--error">{errorMessage}</div>
+        <section className="admin-hero">
+          <div>
+            <p className="section-heading__eyebrow">Catálogo interno</p>
+            <h1>No fue posible cargar el producto</h1>
+            <p>{errorMessage}</p>
+          </div>
 
-        <button
-          className="secondary-button"
-          type="button"
-          onClick={() => navigate("/admin/products")}
-        >
-          Volver a productos
-        </button>
+          <button
+            className="secondary-button"
+            type="button"
+            onClick={() => navigate("/admin/products")}
+          >
+            Volver a productos
+          </button>
+        </section>
       </main>
     );
   }
@@ -154,8 +165,14 @@ export function AdminProductEditPage() {
       initialValues={initialValues}
       isSubmitting={isSubmitting}
       errorMessage={errorMessage}
+      successMessage={successMessage}
       afterContent={
-        hasValidProductId ? <AdminProductAuditPanel productId={productId} /> : null
+        hasValidProductId ? (
+          <AdminProductAuditPanel
+            productId={productId}
+            reloadKey={auditReloadKey}
+          />
+        ) : null
       }
       onCancel={() => navigate("/admin/products")}
       onSubmit={handleSubmit}

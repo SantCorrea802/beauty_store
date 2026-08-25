@@ -3,12 +3,19 @@ import type { FormEvent, ReactNode } from "react";
 import type { AdminCategory } from "../../api/adminCategoriesApi";
 import type { AdminProductUpsertRequest } from "../../api/adminProductsApi";
 
+export type AdminProductVariantFormValue = {
+  id?: number;
+  nombre: string;
+  colorHex: string;
+};
+
 export type AdminProductFormValues = {
   nombre: string;
   precio: string;
   descripcion: string;
   marca: string;
   categoriaIds: number[];
+  variantes: AdminProductVariantFormValue[];
 };
 
 type AdminProductFormProps = {
@@ -26,6 +33,8 @@ type AdminProductFormProps = {
   onSubmit: (request: AdminProductUpsertRequest) => Promise<void>;
 };
 
+const HEX_COLOR_PATTERN = /^#[0-9A-Fa-f]{6}$/;
+
 export function AdminProductForm({
   eyebrow,
   title,
@@ -40,69 +49,137 @@ export function AdminProductForm({
   onCancel,
   onSubmit,
 }: AdminProductFormProps) {
-  const [values, setValues] = useState<AdminProductFormValues>(initialValues);
+  const [nombre, setNombre] = useState(initialValues.nombre);
+  const [precio, setPrecio] = useState(initialValues.precio);
+  const [descripcion, setDescripcion] = useState(initialValues.descripcion);
+  const [marca, setMarca] = useState(initialValues.marca);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>(
+    initialValues.categoriaIds,
+  );
+  const [variantes, setVariantes] = useState<AdminProductVariantFormValue[]>(
+    initialValues.variantes ?? [],
+  );
   const [validationMessage, setValidationMessage] = useState<string | null>(
     null,
   );
 
   useEffect(() => {
-    setValues(initialValues);
+    setNombre(initialValues.nombre);
+    setPrecio(initialValues.precio);
+    setDescripcion(initialValues.descripcion);
+    setMarca(initialValues.marca);
+    setSelectedCategoryIds(initialValues.categoriaIds);
+    setVariantes(initialValues.variantes ?? []);
+    setValidationMessage(null);
   }, [initialValues]);
 
-  function updateField<K extends keyof AdminProductFormValues>(
-    field: K,
-    value: AdminProductFormValues[K],
-  ) {
-    setValues((current) => ({
-      ...current,
-      [field]: value,
-    }));
+  function handleCategoryChange(categoryId: number, checked: boolean) {
+    setSelectedCategoryIds((current) => {
+      if (checked) {
+        return current.includes(categoryId) ? current : [...current, categoryId];
+      }
+
+      return current.filter((id) => id !== categoryId);
+    });
   }
 
-  function toggleCategory(categoryId: number) {
-    setValues((current) => {
-      const exists = current.categoriaIds.includes(categoryId);
+  function handleAddVariant() {
+    setVariantes((current) => [
+      ...current,
+      {
+        nombre: "",
+        colorHex: "#C08A7A",
+      },
+    ]);
+  }
 
-      return {
-        ...current,
-        categoriaIds: exists
-          ? current.categoriaIds.filter((id) => id !== categoryId)
-          : [...current.categoriaIds, categoryId],
-      };
-    });
+  function handleRemoveVariant(indexToRemove: number) {
+    setVariantes((current) =>
+      current.filter((_, index) => index !== indexToRemove),
+    );
+  }
+
+  function handleVariantNameChange(indexToUpdate: number, value: string) {
+    setVariantes((current) =>
+      current.map((variant, index) =>
+        index === indexToUpdate ? { ...variant, nombre: value } : variant,
+      ),
+    );
+  }
+
+  function handleVariantColorChange(indexToUpdate: number, value: string) {
+    setVariantes((current) =>
+      current.map((variant, index) =>
+        index === indexToUpdate ? { ...variant, colorHex: value } : variant,
+      ),
+    );
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const nombre = values.nombre.trim();
-    const precio = Number(values.precio);
-    const descripcion = values.descripcion.trim();
-    const marca = values.marca.trim();
+    const normalizedName = nombre.trim();
+    const normalizedDescription = descripcion.trim();
+    const normalizedBrand = marca.trim();
 
-    if (!nombre) {
+    const normalizedPrice = Number(precio.replace(",", "."));
+
+    if (!normalizedName) {
       setValidationMessage("El nombre del producto es obligatorio.");
       return;
     }
 
-    if (!Number.isFinite(precio) || precio < 0) {
-      setValidationMessage("El precio debe ser un número mayor o igual a cero.");
+    if (!Number.isFinite(normalizedPrice) || normalizedPrice < 0) {
+      setValidationMessage("Ingresa un precio válido mayor o igual a cero.");
       return;
     }
 
-    if (values.categoriaIds.length === 0) {
+    if (selectedCategoryIds.length === 0) {
       setValidationMessage("Selecciona al menos una categoría.");
+      return;
+    }
+
+    const normalizedVariants = variantes.map((variant) => ({
+      id: variant.id,
+      nombre: variant.nombre.trim(),
+      colorHex: variant.colorHex.trim().toUpperCase(),
+    }));
+
+    const hasIncompleteVariant = normalizedVariants.some((variant) => {
+      return !variant.nombre || !HEX_COLOR_PATTERN.test(variant.colorHex);
+    });
+
+    if (hasIncompleteVariant) {
+      setValidationMessage("Cada tono debe tener nombre y un color válido.");
+      return;
+    }
+
+    const duplicateVariant = normalizedVariants.find((variant, index) => {
+      const currentName = variant.nombre.toLowerCase();
+
+      return (
+        normalizedVariants.findIndex(
+          (candidate) => candidate.nombre.toLowerCase() === currentName,
+        ) !== index
+      );
+    });
+
+    if (duplicateVariant) {
+      setValidationMessage(
+        `No puede haber tonos duplicados: ${duplicateVariant.nombre}.`,
+      );
       return;
     }
 
     setValidationMessage(null);
 
     await onSubmit({
-      nombre,
-      precio,
-      descripcion: descripcion || null,
-      marca: marca || null,
-      categoriaIds: values.categoriaIds,
+      nombre: normalizedName,
+      precio: normalizedPrice,
+      descripcion: normalizedDescription || null,
+      marca: normalizedBrand || null,
+      categoriaIds: selectedCategoryIds,
+      variantes: normalizedVariants,
     });
   }
 
@@ -115,88 +192,182 @@ export function AdminProductForm({
           <p>{description}</p>
         </div>
 
-        <button className="secondary-button" type="button" onClick={onCancel}>
+        <button
+          className="secondary-button"
+          type="button"
+          onClick={onCancel}
+          disabled={isSubmitting}
+        >
           Volver a productos
         </button>
       </section>
 
       <section className="admin-form-card">
         <form className="admin-product-form" onSubmit={handleSubmit}>
-          <div className="admin-form-grid">
+          <div className="admin-form-grid admin-form-grid--two">
             <label className="form-field">
               <span>Nombre</span>
               <input
                 type="text"
-                value={values.nombre}
-                onChange={(event) => updateField("nombre", event.target.value)}
+                value={nombre}
+                onChange={(event) => setNombre(event.target.value)}
                 maxLength={160}
                 required
+                placeholder="Ej: Labial negro mate"
               />
             </label>
 
             <label className="form-field">
-              <span>Precio COP</span>
+              <span>Precio</span>
               <input
                 type="number"
-                min="0"
-                step="1"
-                value={values.precio}
-                onChange={(event) => updateField("precio", event.target.value)}
+                value={precio}
+                onChange={(event) => setPrecio(event.target.value)}
+                min={0}
+                step={100}
                 required
+                placeholder="Ej: 25000"
               />
             </label>
+          </div>
 
+          <div className="admin-form-grid admin-form-grid--two">
             <label className="form-field">
               <span>Marca</span>
               <input
                 type="text"
-                value={values.marca}
-                onChange={(event) => updateField("marca", event.target.value)}
+                value={marca}
+                onChange={(event) => setMarca(event.target.value)}
                 maxLength={100}
-                placeholder="Opcional"
+                placeholder="Ej: Hajuvi"
               />
             </label>
           </div>
 
           <label className="form-field">
+            <span>Categorías</span>
+            <div className="admin-category-picker admin-category-picker--wide">
+              {categories.length === 0 ? (
+                <span className="admin-category-picker__empty">
+                  No hay categorías disponibles.
+                </span>
+              ) : null}
+
+              {categories.map((category) => (
+                <label className="admin-category-picker__option" key={category.id}>
+                  <input
+                    type="checkbox"
+                    checked={selectedCategoryIds.includes(category.id)}
+                    onChange={(event) =>
+                      handleCategoryChange(category.id, event.target.checked)
+                    }
+                  />
+                  <span>{category.nombre}</span>
+                </label>
+              ))}
+            </div>
+          </label>
+
+          <label className="form-field">
             <span>Descripción</span>
             <textarea
-              value={values.descripcion}
-              onChange={(event) =>
-                updateField("descripcion", event.target.value)
-              }
+              value={descripcion}
+              onChange={(event) => setDescripcion(event.target.value)}
               maxLength={3000}
-              rows={8}
-              placeholder="Opcional"
+              rows={5}
+              placeholder="Describe el producto, beneficios, modo de uso o detalles relevantes."
             />
           </label>
 
-          <fieldset className="admin-category-fieldset">
-            <legend>Categorías</legend>
+          <section className="admin-variants-editor">
+            <div className="admin-variants-editor__header">
+              <div>
+                <h2>Tonos / colores</h2>
+                <p>
+                  Agrega tonos solo si el producto tiene variantes
+                  seleccionables, como labiales, rubores o productos disponibles
+                  en varios colores.
+                </p>
+              </div>
 
-            {categories.length === 0 ? (
-              <p className="admin-form-help">
-                No hay categorías disponibles. Crea categorías antes de crear
-                productos.
-              </p>
-            ) : (
-              <div className="admin-category-grid">
-                {categories.map((category) => (
-                  <label className="admin-category-option" key={category.id}>
-                    <input
-                      type="checkbox"
-                      checked={values.categoriaIds.includes(category.id)}
-                      onChange={() => toggleCategory(category.id)}
-                    />
-                    <span>
-                      <strong>{category.nombre}</strong>
-                      <small>{category.slug}</small>
-                    </span>
-                  </label>
+              <button
+                className="secondary-button secondary-button--small"
+                type="button"
+                onClick={handleAddVariant}
+              >
+                <span aria-hidden="true">+</span> Tono
+              </button>
+            </div>
+
+            {variantes.length === 0 ? (
+              <div className="state-box">
+                Este producto no tiene tonos configurados.
+              </div>
+            ) : null}
+
+            {variantes.length > 0 ? (
+              <div className="admin-variants-list">
+                {variantes.map((variant, index) => (
+                  <article
+                    className="admin-variant-row"
+                    key={variant.id ?? `new-${index}`}
+                  >
+                    <label className="form-field">
+                      <span>Nombre del tono</span>
+                      <input
+                        type="text"
+                        value={variant.nombre}
+                        onChange={(event) =>
+                          handleVariantNameChange(index, event.target.value)
+                        }
+                        maxLength={80}
+                        placeholder="Ej: Moka, Rosa nude, Rojo cereza"
+                      />
+                    </label>
+
+                    <label className="form-field admin-variant-color-field">
+                      <span>Color</span>
+                      <div className="admin-variant-color-control">
+                        <input
+                          type="color"
+                          value={
+                            HEX_COLOR_PATTERN.test(variant.colorHex)
+                              ? variant.colorHex
+                              : "#C08A7A"
+                          }
+                          onChange={(event) =>
+                            handleVariantColorChange(index, event.target.value)
+                          }
+                          aria-label={`Color del tono ${
+                            variant.nombre || index + 1
+                          }`}
+                        />
+
+                        <input
+                          type="text"
+                          value={variant.colorHex}
+                          onChange={(event) =>
+                            handleVariantColorChange(index, event.target.value)
+                          }
+                          maxLength={7}
+                          placeholder="#C08A7A"
+                        />
+                      </div>
+                    </label>
+
+                    <button
+                      className="secondary-button secondary-button--small admin-variant-row__remove"
+                      type="button"
+                      onClick={() => handleRemoveVariant(index)}
+                    >
+                      Quitar
+                    </button>
+                  </article>
                 ))}
               </div>
-            )}
-          </fieldset>
+            ) : null}
+          </section>
+
           {successMessage ? (
             <div className="form-message form-message--success">
               {successMessage}
@@ -228,7 +399,7 @@ export function AdminProductForm({
             <button
               className="primary-button"
               type="submit"
-              disabled={isSubmitting || categories.length === 0}
+              disabled={isSubmitting}
             >
               {isSubmitting ? "Guardando..." : submitLabel}
             </button>
