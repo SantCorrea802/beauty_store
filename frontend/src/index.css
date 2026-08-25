@@ -3566,3 +3566,881 @@ img {
     0 0 0 1px rgba(116, 64, 128, 0.24),
     0 4px 10px rgba(40, 24, 44, 0.12);
 }
+/* ================================
+   Global mobile layout hardening
+   ================================ */
+
+@media (max-width: 700px) {
+  html,
+  body,
+  #root {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  body {
+    margin: 0;
+  }
+
+  .app-shell {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  .app-header {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1200;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .app-content {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+    padding-top: 190px;
+  }
+
+  .app-header.app-header--compact + .app-content,
+  .app-header--compact + .app-content {
+    padding-top: 190px;
+  }
+
+  .page {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding-left: 12px;
+    padding-right: 12px;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  .catalog-page,
+  .products-page,
+  .home-page,
+  .admin-page,
+  .customer-page {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  .products-grid,
+  .catalog-grid,
+  .favorites-grid,
+  .category-grid {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .product-card {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .product-card img,
+  .product-card__image {
+    max-width: 100%;
+  }
+
+  .product-detail,
+  .cart-page,
+  .cart-layout,
+  .cart-item,
+  .cart-summary,
+  .admin-form-card,
+  .admin-table-card,
+  .admin-hero,
+  .admin-toolbar {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .app-footer {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+}
+
+/* ================================
+   Mobile header/dropdown stability
+   ================================ */
+
+@media (max-width: 700px) {
+  .app-header,
+  .app-header__top,
+  .app-header__nav,
+  .nav-dropdown {
+    overflow: visible !important;
+  }
+
+  .app-header__nav {
+    position: relative;
+    z-index: 1250;
+  }
+
+  .nav-dropdown {
+    position: relative !important;
+    z-index: 1300;
+  }
+
+  .nav-dropdown__trigger {
+    position: relative;
+    z-index: 1301;
+  }
+
+  .nav-dropdown__menu {
+    position: absolute !important;
+    top: calc(100% + 8px) !important;
+    left: 0 !important;
+    right: auto !important;
+    width: min(300px, calc(100vw - 24px)) !important;
+    max-width: calc(100vw - 24px) !important;
+    max-height: min(62vh, 420px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    transform: none !important;
+    z-index: 1500;
+  }
+
+  .app-header.app-header--compact .nav-dropdown__menu {
+    top: calc(100% + 8px) !important;
+  }
+}
+/* ================================
+   Final mobile density patch
+   ================================ */
+
+@media (max-width: 700px) {
+  /*
+   * Header móvil más compacto.
+   * En móvil priorizamos buscar + navegación.
+   */
+  .app-header {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1200 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .app-header__top {
+    height: auto !important;
+    min-height: 0 !important;
+    grid-template-columns: 1fr !important;
+    padding: 8px 12px 7px !important;
+    gap: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .brand,
+  .header-actions {
+    display: none !important;
+  }
+
+  .search {
+    width: 100% !important;
+    height: 38px !important;
+    padding: 0 8px 0 16px !important;
+    box-shadow: 0 6px 14px rgba(82, 45, 99, 0.05) !important;
+  }
+
+  .search__input {
+    font-size: 13px !important;
+  }
+
+  .search__button {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .app-header__nav {
+    height: 42px !important;
+    padding: 4px !important;
+    gap: 4px !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    overflow: visible !important;
+  }
+
+  .nav-link,
+  .nav-dropdown__trigger {
+    height: 34px !important;
+    min-height: 34px !important;
+    padding: 0 5px !important;
+    border-radius: 999px !important;
+    font-size: 10.5px !important;
+    line-height: 1 !important;
+  }
+
+  .nav-dropdown__chevron {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  .app-content {
+    padding-top: 96px !important;
+  }
+
+  .app-header.app-header--compact + .app-content,
+  .app-header--compact + .app-content {
+    padding-top: 88px !important;
+  }
+
+  /*
+   * Dropdown móvil.
+   * Quitamos sticky en "Ver todas las categorías" porque estaba
+   * tapando categorías cuando el menú hacía scroll.
+   */
+  .app-header,
+  .app-header__top,
+  .app-header__nav,
+  .nav-dropdown {
+    overflow: visible !important;
+  }
+
+  .nav-dropdown {
+    position: relative !important;
+    min-width: 0 !important;
+  }
+
+  .nav-dropdown__menu {
+    position: absolute !important;
+    top: calc(100% + 4px) !important;
+    left: 0 !important;
+    right: auto !important;
+    width: min(300px, calc(100vw - 18px)) !important;
+    max-width: calc(100vw - 18px) !important;
+    max-height: min(54vh, 330px) !important;
+    padding: 8px !important;
+    gap: 2px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior: contain !important;
+    border-radius: 16px !important;
+    z-index: 1600 !important;
+    transform: none !important;
+  }
+
+  .app-header.app-header--compact .nav-dropdown__menu {
+    top: calc(100% + 4px) !important;
+  }
+
+  .nav-dropdown__item,
+  .nav-dropdown__empty {
+    min-height: 34px !important;
+    padding: 7px 10px !important;
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+  }
+
+  .nav-dropdown__more {
+    position: static !important;
+    bottom: auto !important;
+    margin-top: 4px !important;
+    padding: 9px 10px !important;
+    border-top: 1px solid var(--color-border) !important;
+    background: transparent !important;
+  }
+
+  /*
+   * Densidad general móvil.
+   */
+  .page {
+    padding: 14px 10px 48px !important;
+  }
+
+  .hero {
+    margin-bottom: 16px !important;
+    padding: 16px !important;
+    border-radius: 18px !important;
+  }
+
+  .hero__title {
+    font-size: clamp(24px, 8vw, 32px) !important;
+  }
+
+  .hero__text {
+    margin-top: 10px !important;
+    font-size: 13px !important;
+    line-height: 1.45 !important;
+  }
+
+  .catalog-section {
+    padding: 14px !important;
+    border-radius: 18px !important;
+  }
+
+  .section-heading {
+    margin-bottom: 14px !important;
+    gap: 10px !important;
+  }
+
+  .section-heading__eyebrow {
+    margin-bottom: 4px !important;
+    font-size: 10px !important;
+  }
+
+  .section-heading__title {
+    font-size: 22px !important;
+  }
+
+  .catalog-search {
+    gap: 8px !important;
+  }
+
+  .catalog-search__input,
+  .catalog-search__button {
+    min-height: 38px !important;
+    padding: 8px 12px !important;
+    font-size: 12px !important;
+  }
+
+  /*
+   * Cards de productos más densas.
+   */
+  .product-grid {
+    gap: 10px !important;
+  }
+
+  .product-card {
+    min-height: 278px !important;
+    border-radius: 14px !important;
+  }
+
+  .product-card__image-wrapper {
+    height: 122px !important;
+  }
+
+  .product-card__image {
+    max-height: 104px !important;
+  }
+
+  .product-card__image-placeholder {
+    width: 78px !important;
+    height: 78px !important;
+    border-radius: 18px !important;
+    font-size: 11px !important;
+  }
+
+  .product-card__body {
+    padding: 9px !important;
+    gap: 6px !important;
+  }
+
+  .product-card__brand {
+    margin-bottom: 3px !important;
+    font-size: 9.5px !important;
+    line-height: 1.15 !important;
+  }
+
+  .product-card__name {
+    min-height: 34px !important;
+    font-size: 12px !important;
+    line-height: 1.18 !important;
+  }
+
+  .product-card__price {
+    margin: 6px 0 8px !important;
+    font-size: 12.5px !important;
+  }
+
+  .product-card__action {
+    min-height: 30px !important;
+    padding: 6px 8px !important;
+    font-size: 10.5px !important;
+  }
+
+  .product-card__favorite {
+    width: 30px !important;
+    height: 30px !important;
+    flex: 0 0 30px !important;
+    font-size: 15px !important;
+  }
+
+  /*
+   * Página de categorías: más cards visibles por pantalla.
+   */
+  .category-search {
+    margin-bottom: 12px !important;
+    gap: 6px !important;
+    font-size: 12px !important;
+  }
+
+  .category-search input {
+    min-height: 38px !important;
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+  }
+
+  .categories-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+
+  .category-card {
+    min-height: 78px !important;
+    padding: 12px !important;
+    gap: 4px !important;
+    border-radius: 16px !important;
+  }
+
+  .category-card strong {
+    font-size: 14px !important;
+    line-height: 1.2 !important;
+  }
+
+  .category-card span {
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+  }
+
+  /*
+   * Crear/editar producto admin: categorías compactas.
+   */
+  .admin-form-card,
+  .admin-hero,
+  .admin-toolbar,
+  .admin-table-card,
+  .admin-images-card,
+  .admin-audit-card {
+    padding: 14px !important;
+    border-radius: 18px !important;
+  }
+
+  .admin-page {
+    gap: 14px !important;
+  }
+
+  .admin-hero h1 {
+    font-size: clamp(24px, 8vw, 30px) !important;
+  }
+
+  .admin-hero p {
+    margin-top: 8px !important;
+    font-size: 13px !important;
+    line-height: 1.45 !important;
+  }
+
+  .admin-product-form {
+    gap: 14px !important;
+  }
+
+  .form-field {
+    gap: 6px !important;
+  }
+
+  .form-field span {
+    font-size: 10.5px !important;
+  }
+
+  .form-field input {
+    min-height: 38px !important;
+    padding: 0 12px !important;
+    font-size: 13px !important;
+  }
+
+  .form-field textarea {
+    min-height: 104px !important;
+    padding: 10px 12px !important;
+    border-radius: 16px !important;
+    font-size: 13px !important;
+    line-height: 1.45 !important;
+  }
+
+  .admin-category-picker--wide {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    max-height: 220px !important;
+    padding: 10px !important;
+    overflow-y: auto !important;
+    border-radius: 16px !important;
+  }
+
+  .admin-category-picker--wide .admin-category-picker__option {
+    width: auto !important;
+    min-height: 38px !important;
+    justify-content: flex-start !important;
+    gap: 7px !important;
+    padding: 7px 9px !important;
+    border-radius: 14px !important;
+    font-size: 10.5px !important;
+    line-height: 1.15 !important;
+  }
+
+  .admin-category-picker--wide .admin-category-picker__option input {
+    width: 14px !important;
+    height: 14px !important;
+    flex: 0 0 14px !important;
+  }
+
+  /*
+   * Detalle de producto móvil: compacto.
+   */
+  .back-link {
+    margin-bottom: 10px !important;
+    font-size: 12px !important;
+  }
+
+  .product-detail {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    padding: 12px !important;
+    border-radius: 18px !important;
+  }
+
+  .product-detail__media {
+    min-height: 178px !important;
+    padding: 8px !important;
+    border-radius: 16px !important;
+  }
+
+  .product-detail__image {
+    max-height: 160px !important;
+  }
+
+  .product-detail__placeholder {
+    width: 94px !important;
+    height: 94px !important;
+    border-radius: 20px !important;
+    font-size: 12px !important;
+  }
+
+  .product-detail__thumbnails {
+    gap: 6px !important;
+    margin-top: 8px !important;
+  }
+
+  .product-detail__thumbnail-button,
+  .product-detail__thumbnail {
+    width: 46px !important;
+    height: 46px !important;
+    border-radius: 10px !important;
+  }
+
+  .product-detail__info {
+    justify-content: flex-start !important;
+  }
+
+  .product-detail__brand {
+    margin-bottom: 5px !important;
+    font-size: 10px !important;
+  }
+
+  .product-detail__title {
+    font-size: clamp(22px, 7vw, 28px) !important;
+    line-height: 1.05 !important;
+  }
+
+  .product-detail__price {
+    margin: 10px 0 6px !important;
+    font-size: 22px !important;
+  }
+
+  .product-detail__availability {
+    margin-bottom: 12px !important;
+    padding: 5px 10px !important;
+    font-size: 11px !important;
+  }
+
+  .product-detail__description {
+    padding-top: 6px !important;
+  }
+
+  .product-detail__description h2 {
+    margin: 8px 0 4px !important;
+    font-size: 14px !important;
+  }
+
+  .product-detail__description p {
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+  }
+
+  .product-variants {
+    margin: 12px 0 !important;
+    padding: 10px !important;
+    gap: 9px !important;
+    border-radius: 16px !important;
+  }
+
+  .product-variants__header {
+    gap: 4px !important;
+  }
+
+  .product-variants__header h2 {
+    font-size: 14px !important;
+  }
+
+  .product-variants__header span {
+    font-size: 11.5px !important;
+  }
+
+  .product-variants__list {
+    gap: 8px !important;
+  }
+
+  .product-variant-option {
+    min-width: 58px !important;
+    padding: 7px !important;
+    gap: 5px !important;
+    border-radius: 13px !important;
+  }
+
+  .product-variant-option__swatch {
+    width: 24px !important;
+    height: 24px !important;
+  }
+
+  .product-variant-option__name {
+    max-width: 66px !important;
+    font-size: 10.5px !important;
+    line-height: 1.1 !important;
+  }
+
+  .quantity-control {
+    margin-top: 12px !important;
+    max-width: 120px !important;
+    gap: 5px !important;
+  }
+
+  .quantity-control label {
+    font-size: 10.5px !important;
+  }
+
+  .quantity-control input {
+    height: 36px !important;
+    font-size: 13px !important;
+  }
+
+  .product-detail__actions {
+    margin-top: 14px !important;
+    gap: 8px !important;
+  }
+
+  .primary-button,
+  .secondary-button,
+  .auth-card__link-button {
+    min-height: 38px !important;
+    padding: 0 12px !important;
+    font-size: 12px !important;
+  }
+
+  .product-detail__actions .primary-button,
+  .product-detail__actions .secondary-button,
+  .product-detail__actions .auth-card__link-button {
+    width: 100% !important;
+  }
+
+  .product-detail__note {
+    margin-top: 12px !important;
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+  }
+
+  /*
+   * Carrito móvil más compacto.
+   */
+  .cart-layout,
+  .cart-list {
+    gap: 12px !important;
+  }
+
+  .cart-item {
+    gap: 10px !important;
+    padding: 12px !important;
+    border-radius: 16px !important;
+  }
+
+  .cart-item__media {
+    min-height: 112px !important;
+  }
+
+  .cart-item__media img {
+    max-height: 96px !important;
+  }
+
+  .cart-item__content h2 {
+    font-size: 16px !important;
+  }
+
+  .cart-item__price {
+    margin: 6px 0 10px !important;
+    font-size: 15px !important;
+  }
+
+  .cart-item__variant {
+    margin: 4px 0 6px !important;
+    padding: 5px 8px !important;
+    font-size: 11.5px !important;
+  }
+
+  .cart-summary {
+    padding: 14px !important;
+    border-radius: 18px !important;
+  }
+
+  .cart-summary h2 {
+    margin-bottom: 12px !important;
+    font-size: 18px !important;
+  }
+
+  .cart-summary__row {
+    padding: 9px 0 !important;
+    font-size: 13px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .categories-grid {
+    gap: 8px !important;
+  }
+
+  .category-card {
+    min-height: 72px !important;
+    padding: 10px !important;
+  }
+
+  .category-card strong {
+    font-size: 13px !important;
+  }
+
+  .admin-category-picker--wide {
+    grid-template-columns: 1fr !important;
+    max-height: 240px !important;
+  }
+
+  .product-card {
+    min-height: 260px !important;
+  }
+
+  .product-card__image-wrapper {
+    height: 112px !important;
+  }
+
+  .product-card__image {
+    max-height: 96px !important;
+  }
+}
+
+/* ================================
+   Mobile header expanded/compact fix
+   ================================ */
+
+@media (max-width: 700px) {
+  /*
+   * Estado normal: al inicio de la página.
+   * Debe mostrar logo, acciones, buscador y navegación.
+   */
+  .app-header:not(.app-header--compact) .app-header__top {
+    display: grid !important;
+    grid-template-columns: auto auto !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    padding: 8px 12px 7px !important;
+    overflow: visible !important;
+  }
+
+  .app-header:not(.app-header--compact) .brand {
+    display: inline-flex !important;
+    width: auto !important;
+    max-height: 54px !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    opacity: 1 !important;
+    transform: none !important;
+    pointer-events: auto !important;
+    overflow: visible !important;
+  }
+
+  .app-header:not(.app-header--compact) .brand__logo {
+    width: 42px !important;
+    height: 42px !important;
+  }
+
+  .app-header:not(.app-header--compact) .header-actions {
+    display: inline-flex !important;
+    max-height: 54px !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 8px !important;
+    opacity: 1 !important;
+    transform: none !important;
+    pointer-events: auto !important;
+    overflow: visible !important;
+  }
+
+  .app-header:not(.app-header--compact) .icon-button {
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  .app-header:not(.app-header--compact) .icon-button__icon {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  .app-header:not(.app-header--compact) .search {
+    grid-column: 1 / -1 !important;
+    order: 3 !important;
+    width: 100% !important;
+    height: 38px !important;
+    padding: 0 8px 0 16px !important;
+  }
+
+  .app-header:not(.app-header--compact) + .app-content {
+    padding-top: 144px !important;
+  }
+
+  /*
+   * Estado compacto: solo cuando React agrega .app-header--compact.
+   */
+  .app-header.app-header--compact .app-header__top {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    padding: 8px 12px 6px !important;
+    gap: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .app-header.app-header--compact .brand,
+  .app-header.app-header--compact .header-actions {
+    display: none !important;
+    max-height: 0 !important;
+    opacity: 0 !important;
+    transform: translateY(-8px) !important;
+    pointer-events: none !important;
+  }
+
+  .app-header.app-header--compact .search {
+    grid-column: 1 / -1 !important;
+    order: 0 !important;
+    width: 100% !important;
+    height: 38px !important;
+    padding: 0 8px 0 16px !important;
+  }
+
+  .app-header.app-header--compact + .app-content {
+    padding-top: 88px !important;
+  }
+}

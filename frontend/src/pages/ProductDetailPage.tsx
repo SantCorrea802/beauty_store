@@ -41,6 +41,14 @@ export function ProductDetailPage() {
   );
 
   useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "auto",
+    });
+  }, [slug]);
+
+  useEffect(() => {
     let ignore = false;
 
     async function loadProduct() {
