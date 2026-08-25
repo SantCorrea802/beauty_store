@@ -27,9 +27,13 @@ public class AdminAuditController {
     @GetMapping("/entity")
     public List<AdminAuditLogResponse> findRecentByEntity(
             @RequestParam AdminAuditEntityType entityType,
-            @RequestParam Long entityId,
+            @RequestParam(required = false) Long entityId,
             @RequestParam(defaultValue = "20") int limit
     ) {
+        if (entityId == null) {
+            return adminAuditService.findRecentByEntityType(entityType, limit);
+        }
+
         return adminAuditService.findRecentByEntity(entityType, entityId, limit);
     }
 }

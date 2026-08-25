@@ -16,9 +16,31 @@ const currencyFormatter = new Intl.NumberFormat("es-CO", {
   maximumFractionDigits: 0,
 });
 
+
+function buildQuantityInputState(items: CartItem[]) {
+  return Object.fromEntries(
+    items.map((item) => [item.itemId, String(item.quantity)]),
+  );
+}
+
+function parseCartQuantityInput(value: string) {
+  const parsedQuantity = Number(value);
+
+  if (
+    !Number.isInteger(parsedQuantity) ||
+    parsedQuantity < 1 ||
+    parsedQuantity > 99
+  ) {
+    return null;
+  }
+
+  return parsedQuantity;
+}
+
 export function CustomerCartPage() {
   
   const [cart, setCart] = useState<Cart | null>(null);
+  const [quantityInputs, setQuantityInputs] = useState<Record<number, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isGeneratingOrder, setIsGeneratingOrder] = useState(false);
 
@@ -38,6 +60,7 @@ export function CustomerCartPage() {
 
         if (!ignore) {
           setCart(response);
+          setQuantityInputs(buildQuantityInputState(response.items));
         }
       } catch (error) {
         if (!ignore) {
@@ -75,6 +98,7 @@ export function CustomerCartPage() {
       });
 
       setCart(updatedCart);
+      setQuantityInputs(buildQuantityInputState(updatedCart.items));
     } catch (error) {
       const message =
         error instanceof Error
@@ -84,6 +108,39 @@ export function CustomerCartPage() {
       setFeedbackMessage(message);
     }
   }
+
+  function handleQuantityInputChange(itemId: number, value: string) {
+    if (value === "" || /^\d{1,2}$/.test(value)) {
+      setQuantityInputs((current) => ({
+        ...current,
+        [itemId]: value,
+      }));
+    }
+  }
+
+  async function commitQuantityInput(item: CartItem) {
+    const rawValue = quantityInputs[item.itemId] ?? String(item.quantity);
+    const parsedQuantity = parseCartQuantityInput(rawValue);
+
+    if (parsedQuantity === null) {
+      setQuantityInputs((current) => ({
+        ...current,
+        [item.itemId]: String(item.quantity),
+      }));
+      return;
+    }
+
+    if (parsedQuantity === item.quantity) {
+      setQuantityInputs((current) => ({
+        ...current,
+        [item.itemId]: String(parsedQuantity),
+      }));
+      return;
+    }
+
+    await handleUpdateQuantity(item, parsedQuantity);
+  }
+
 
   async function handleRemoveItem(itemId: number) {
     try {
@@ -114,6 +171,12 @@ export function CustomerCartPage() {
         };
       });
 
+      setQuantityInputs((current) => {
+        const next = { ...current };
+        delete next[itemId];
+        return next;
+      });
+
       setFeedbackMessage("Producto eliminado del carrito.");
     } catch (error) {
       const message =
@@ -139,6 +202,8 @@ export function CustomerCartPage() {
         total: 0,
         fechaUltimaActualizacion: currentCart?.fechaUltimaActualizacion ?? null,
       }));
+
+      setQuantityInputs({});
 
       setFeedbackMessage("Carrito vaciado correctamente.");
     } catch (error) {
@@ -310,19 +375,29 @@ export function CustomerCartPage() {
                       {currencyFormatter.format(item.precioUnitarioSnapshot)}
                     </p>
 
+
+
                     <div className="cart-item__controls">
                       <label>
                         <span>Cantidad</span>
                         <input
                           type="number"
                           min={1}
-                          value={item.quantity}
+                          max={99}
+                          step={1}
+                          inputMode="numeric"
+                          value={quantityInputs[item.itemId] ?? String(item.quantity)}
                           onChange={(event) =>
-                            handleUpdateQuantity(
-                              item,
-                              Math.max(1, Number(event.target.value)),
-                            )
+                            handleQuantityInputChange(item.itemId, event.target.value)
                           }
+                          onBlur={() => {
+                            void commitQuantityInput(item);
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.currentTarget.blur();
+                            }
+                          }}
                         />
                       </label>
 

@@ -3,18 +3,23 @@ import { apiRequest } from "../../api/http";
 
 type AdminAuditLog = {
   id: number;
-  entityType?: string;
-  tipoEntidad?: string;
+
+  actorEmail?: string | null;
+  action?: string | null;
+  entityType?: string | null;
   entityId?: number | null;
+  summary?: string | null;
+  createdAt?: string | null;
+
+  adminEmail?: string | null;
+  adminNombre?: string | null;
+  accion?: string | null;
+  detalle?: string | null;
+  tipoEntidad?: string | null;
   idEntidad?: number | null;
   entityName?: string | null;
   nombreEntidad?: string | null;
-  adminId?: number;
-  adminEmail: string;
-  adminNombre: string;
-  accion: string;
-  detalle: string | null;
-  fechaEvento: string;
+  fechaEvento?: string | null;
 };
 
 type AdminAuditPanelProps = {
@@ -27,6 +32,38 @@ type AdminAuditPanelProps = {
   emptyMessage?: string;
 };
 
+function getAction(log: AdminAuditLog) {
+  return log.action ?? log.accion ?? null;
+}
+
+function getSummary(log: AdminAuditLog) {
+  return log.summary ?? log.detalle ?? null;
+}
+
+function getEntityType(log: AdminAuditLog) {
+  return log.entityType ?? log.tipoEntidad ?? null;
+}
+
+function getEntityId(log: AdminAuditLog) {
+  return log.entityId ?? log.idEntidad ?? null;
+}
+
+function getEntityName(log: AdminAuditLog) {
+  return log.entityName ?? log.nombreEntidad ?? null;
+}
+
+function getCreatedAt(log: AdminAuditLog) {
+  return log.createdAt ?? log.fechaEvento ?? null;
+}
+
+function normalizeEntityType(value: string | null | undefined) {
+  return value?.trim().toUpperCase() ?? null;
+}
+
+function matchesEntityType(log: AdminAuditLog, expectedEntityType: string) {
+  return normalizeEntityType(getEntityType(log)) === normalizeEntityType(expectedEntityType);
+}
+
 function getAdminAuditLogs({
   entityType,
   entityId,
@@ -36,15 +73,17 @@ function getAdminAuditLogs({
   entityId?: number;
   limit: number;
 }): Promise<AdminAuditLog[]> {
-  if (entityType) {
+  /*
+   * Importante:
+   * /api/admin/audit/entity se usa SOLO para entidad específica.
+   * Algunas versiones del backend exigen entityId y devuelven 400 si falta.
+   */
+  if (entityType && entityId !== undefined) {
     const searchParams = new URLSearchParams({
       entityType,
+      entityId: String(entityId),
       limit: String(limit),
     });
-
-    if (entityId !== undefined) {
-      searchParams.set("entityId", String(entityId));
-    }
 
     return apiRequest<AdminAuditLog[]>(
       `/api/admin/audit/entity?${searchParams.toString()}`,
@@ -55,8 +94,14 @@ function getAdminAuditLogs({
     );
   }
 
+  /*
+   * Para historial general, pedimos auditoría reciente y filtramos en frontend.
+   * Pedimos más registros cuando hay filtro por tipo para no quedarnos cortos.
+   */
+  const effectiveLimit = entityType ? Math.min(limit * 4, 100) : limit;
+
   const searchParams = new URLSearchParams({
-    limit: String(limit),
+    limit: String(effectiveLimit),
   });
 
   return apiRequest<AdminAuditLog[]>(
@@ -68,8 +113,22 @@ function getAdminAuditLogs({
   );
 }
 
-function formatAuditAction(action: string) {
+function formatAuditAction(action: string | null | undefined) {
   const labels: Record<string, string> = {
+    CATEGORY_CREATED: "Categoría creada",
+    CATEGORY_UPDATED: "Categoría actualizada",
+    CATEGORY_DELETED: "Categoría eliminada",
+
+    ADMIN_USER_CREATED: "Admin creado",
+    ADMIN_USER_ACTIVATED: "Admin activado",
+    ADMIN_USER_DEACTIVATED: "Admin desactivado",
+
+    PRODUCT_CREATED: "Producto creado",
+    PRODUCT_UPDATED: "Producto actualizado",
+    PRODUCT_ACTIVATED: "Producto activado",
+    PRODUCT_DEACTIVATED: "Producto desactivado",
+    PRODUCT_VARIANTS_UPDATED: "Tonos actualizados",
+
     CREATED: "Creación",
     UPDATED: "Actualización",
     DELETED: "Eliminación",
@@ -80,23 +139,16 @@ function formatAuditAction(action: string) {
     ADMIN_INVITED: "Admin invitado",
     ADMIN_ACTIVATED: "Admin activado",
     ADMIN_DEACTIVATED: "Admin desactivado",
-
-    CATEGORY_CREATED: "Categoría creada",
-    CATEGORY_UPDATED: "Categoría actualizada",
-    CATEGORY_DELETED: "Categoría eliminada",
-
-    PRODUCT_CREATED: "Producto creado",
-    PRODUCT_UPDATED: "Producto actualizado",
-    PRODUCT_ACTIVATED: "Producto activado",
-    PRODUCT_DEACTIVATED: "Producto desactivado",
-
-    PRODUCT_VARIANTS_UPDATED: "Tonos actualizados",
   };
+
+  if (!action) {
+    return "Acción administrativa";
+  }
 
   return labels[action] ?? action;
 }
 
-function formatEntityType(value: string | undefined) {
+function formatEntityType(value: string | null | undefined) {
   const labels: Record<string, string> = {
     ADMIN_USER: "Usuario admin",
     CATEGORY: "Categoría",
@@ -112,7 +164,11 @@ function formatEntityType(value: string | undefined) {
   return labels[value] ?? value;
 }
 
-function formatDateTime(value: string) {
+function formatDateTime(value: string | null | undefined) {
+  if (!value) {
+    return "Fecha no disponible";
+  }
+
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
@@ -125,12 +181,36 @@ function formatDateTime(value: string) {
   }).format(date);
 }
 
-function getEntityName(log: AdminAuditLog) {
-  return log.entityName ?? log.nombreEntidad ?? null;
+function getActorLabel(log: AdminAuditLog) {
+  const actorName = log.adminNombre?.trim();
+  const actorEmail = log.actorEmail ?? log.adminEmail ?? null;
+
+  if (actorName && actorEmail) {
+    return `${actorName} · ${actorEmail}`;
+  }
+
+  if (actorEmail) {
+    return actorEmail;
+  }
+
+  return "Admin no identificado";
 }
 
-function getEntityType(log: AdminAuditLog) {
-  return log.entityType ?? log.tipoEntidad;
+function formatEntityLabel(log: AdminAuditLog) {
+  const rawEntityType = getEntityType(log);
+  const entityType = formatEntityType(rawEntityType);
+  const entityName = getEntityName(log);
+  const entityId = getEntityId(log);
+
+  if (entityName) {
+    return `${entityType} · ${entityName}`;
+  }
+
+  if (entityId !== null && entityId !== undefined) {
+    return `${entityType} · ID ${entityId}`;
+  }
+
+  return entityType;
 }
 
 export function AdminAuditPanel({
@@ -160,8 +240,15 @@ export function AdminAuditPanel({
           limit,
         });
 
+        const visibleLogs =
+          entityType && entityId === undefined
+            ? response
+                .filter((log) => matchesEntityType(log, entityType))
+                .slice(0, limit)
+            : response;
+
         if (!ignore) {
-          setLogs(response);
+          setLogs(visibleLogs);
         }
       } catch (error) {
         if (!ignore) {
@@ -211,28 +298,23 @@ export function AdminAuditPanel({
       {!isLoading && !errorMessage && logs.length > 0 ? (
         <div className="admin-audit-list">
           {logs.map((log) => {
-            const resolvedEntityType = getEntityType(log);
-            const resolvedEntityName = getEntityName(log);
+            const createdAt = getCreatedAt(log);
+            const summary = getSummary(log);
 
             return (
               <article className="admin-audit-item" key={log.id}>
                 <div className="admin-audit-item__main">
-                  <strong>{formatAuditAction(log.accion)}</strong>
+                  <strong>{formatAuditAction(getAction(log))}</strong>
 
-                  {log.detalle ? <p>{log.detalle}</p> : null}
+                  {summary ? <p>{summary}</p> : null}
 
-                  <span>
-                    {formatEntityType(resolvedEntityType)}
-                    {resolvedEntityName ? ` · ${resolvedEntityName}` : ""}
-                  </span>
+                  <span>{formatEntityLabel(log)}</span>
 
-                  <span>
-                    {log.adminNombre} · {log.adminEmail}
-                  </span>
+                  <span>{getActorLabel(log)}</span>
                 </div>
 
-                <time dateTime={log.fechaEvento}>
-                  {formatDateTime(log.fechaEvento)}
+                <time dateTime={createdAt ?? undefined}>
+                  {formatDateTime(createdAt)}
                 </time>
               </article>
             );

@@ -9,6 +9,11 @@ public interface AdminAuditLogRepository extends JpaRepository<AdminAuditLog, Lo
 
     List<AdminAuditLog> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
+    List<AdminAuditLog> findByEntityTypeOrderByCreatedAtDesc(
+            AdminAuditEntityType entityType,
+            Pageable pageable
+    );
+
     List<AdminAuditLog> findByEntityTypeAndEntityIdOrderByCreatedAtDesc(
             AdminAuditEntityType entityType,
             Long entityId,

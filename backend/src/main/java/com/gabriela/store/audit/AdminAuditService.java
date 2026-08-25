@@ -54,6 +54,23 @@ public class AdminAuditService {
     }
 
     @Transactional(readOnly = true)
+    public List<AdminAuditLogResponse> findRecentByEntityType(
+            AdminAuditEntityType entityType,
+            int limit
+    ) {
+        int safeLimit = clampLimit(limit);
+
+        return adminAuditLogRepository
+                .findByEntityTypeOrderByCreatedAtDesc(
+                        entityType,
+                        PageRequest.of(0, safeLimit)
+                )
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<AdminAuditLogResponse> findRecentByEntity(
             AdminAuditEntityType entityType,
             Long entityId,
