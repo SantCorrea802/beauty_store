@@ -25,7 +25,7 @@ export function ProductDetailPage() {
   const [selectedVariantId, setSelectedVariantId] = useState<number | null>(
     null,
   );
-  const [quantity, setQuantity] = useState(1);
+  const [quantityInput, setQuantityInput] = useState("1");
 
   const [isFavorite, setIsFavorite] = useState(false);
   const [isLoadingFavoriteState, setIsLoadingFavoriteState] = useState(false);
@@ -212,6 +212,20 @@ export function ProductDetailPage() {
     }
   }
 
+  function getValidatedQuantity() {
+    const parsedQuantity = Number(quantityInput);
+
+    if (
+      !Number.isInteger(parsedQuantity) ||
+      parsedQuantity < 1 ||
+      parsedQuantity > 99
+    ) {
+      return null;
+    }
+
+    return parsedQuantity;
+  }
+
   async function handleAddCartItem() {
     if (!product) {
       return;
@@ -228,6 +242,14 @@ export function ProductDetailPage() {
       return;
     }
 
+    const validatedQuantity = getValidatedQuantity();
+
+    if (validatedQuantity === null) {
+      setFeedbackVariant("error");
+      setFeedbackMessage("Ingresa una cantidad válida entre 1 y 99.");
+      return;
+    }
+
     try {
       setIsAddingCart(true);
       setFeedbackMessage(null);
@@ -235,7 +257,7 @@ export function ProductDetailPage() {
       await addCartItem({
         productId: product.id,
         variantId: selectedVariant?.id ?? null,
-        quantity,
+        quantity: validatedQuantity,
       });
 
       setFeedbackVariant("success");
@@ -396,15 +418,31 @@ export function ProductDetailPage() {
               id="product-quantity"
               type="number"
               min={1}
-              value={quantity}
+              max={99}
+              step={1}
+              inputMode="numeric"
+              value={quantityInput}
               onChange={(event) => {
-                const nextQuantity = Number(event.target.value);
+                const nextValue = event.target.value;
 
-                setQuantity(
-                  Number.isFinite(nextQuantity) && nextQuantity > 0
-                    ? nextQuantity
-                    : 1,
-                );
+                if (nextValue === "") {
+                  setQuantityInput("");
+                  return;
+                }
+
+                if (/^\d{1,2}$/.test(nextValue)) {
+                  setQuantityInput(nextValue);
+                }
+              }}
+              onBlur={() => {
+                const validatedQuantity = getValidatedQuantity();
+
+                if (validatedQuantity === null) {
+                  setQuantityInput("1");
+                  return;
+                }
+
+                setQuantityInput(String(validatedQuantity));
               }}
             />
           </div>
