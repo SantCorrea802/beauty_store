@@ -1,4 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import type { FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -6,11 +10,13 @@ import {
   getMyFavorites,
   removeFavorite,
 } from "../api/favoritesApi";
-import { getProducts, getProductsByCategory } from "../api/productsApi";
+import { getProducts } from "../api/productsApi";
 import { getCustomerToken } from "../auth/authStorage";
 import { ProductCard } from "../components/ProductCard";
 import { Toast } from "../components/Toast";
 import type { Product } from "../types/product";
+
+const PRODUCTS_PER_PAGE = 10;
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -23,36 +29,57 @@ export function HomePage() {
   const [favoriteProductIds, setFavoriteProductIds] = useState<Set<number>>(
     () => new Set(),
   );
+
   const [searchTerm, setSearchTerm] = useState(urlSearchTerm);
 
   const [isLoading, setIsLoading] = useState(true);
-  const [togglingFavoriteProductId, setTogglingFavoriteProductId] =
-    useState<number | null>(null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [loadMoreErrorMessage, setLoadMoreErrorMessage] =
+    useState<string | null>(null);
+
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastVariant, setToastVariant] = useState<"success" | "error">(
     "success",
   );
 
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const loadingMoreRef = useRef(false);
+
   useEffect(() => {
     setSearchTerm(urlSearchTerm);
   }, [urlSearchTerm]);
 
+  /**
+   * Carga la primera página cada vez que cambia la categoría.
+   */
   useEffect(() => {
     let ignore = false;
 
-    async function loadProducts() {
+    async function loadInitialProducts() {
       try {
         setIsLoading(true);
         setErrorMessage(null);
+        setLoadMoreErrorMessage(null);
+        setProducts([]);
+        setCurrentPage(0);
+        setHasMore(false);
+        loadingMoreRef.current = false;
 
-        const productsFromApi = categorySlug
-          ? await getProductsByCategory(categorySlug)
-          : await getProducts();
+        const response = await getProducts({
+          page: 0,
+          size: PRODUCTS_PER_PAGE,
+          category: categorySlug,
+          search: urlSearchTerm.trim() || null,
+        });
 
         if (!ignore) {
-          setProducts(productsFromApi);
+          setProducts(response.content);
+          setCurrentPage(response.number);
+          setHasMore(!response.last);
         }
       } catch (error) {
         if (!ignore) {
@@ -62,6 +89,7 @@ export function HomePage() {
               : "No fue posible cargar los productos.";
 
           setErrorMessage(message);
+          setProducts([]);
         }
       } finally {
         if (!ignore) {
@@ -70,12 +98,90 @@ export function HomePage() {
       }
     }
 
-    loadProducts();
+    loadInitialProducts();
 
     return () => {
       ignore = true;
     };
-  }, [categorySlug]);
+  }, [categorySlug, urlSearchTerm]);
+
+  /**
+   * Carga la siguiente página y la agrega
+   * a los productos que ya están en pantalla.
+   */
+  async function loadNextPage() {
+    if (loadingMoreRef.current || !hasMore || isLoading) {
+      return;
+    }
+
+    loadingMoreRef.current = true;
+    setIsLoadingMore(true);
+    setLoadMoreErrorMessage(null);
+
+    try {
+      const nextPage = currentPage + 1;
+
+      const response = await getProducts({
+        page: nextPage,
+        size: PRODUCTS_PER_PAGE,
+        category: categorySlug,
+        search: urlSearchTerm.trim() || null,
+      });
+
+      setProducts((currentProducts) => [
+        ...currentProducts,
+        ...response.content,
+      ]);
+
+      setCurrentPage(response.number);
+      setHasMore(!response.last);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No fue posible cargar más productos.";
+
+      setLoadMoreErrorMessage(message);
+    } finally {
+      loadingMoreRef.current = false;
+      setIsLoadingMore(false);
+    }
+  }
+
+  /**
+   * Observa un elemento situado debajo del catálogo.
+   *
+   * Cuando el usuario se acerca al final,
+   * se solicita automáticamente la siguiente página.
+   */
+  useEffect(() => {
+    const element = loadMoreRef.current;
+
+    if (!element || !hasMore || isLoading) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+
+        if (entry?.isIntersecting) {
+          void loadNextPage();
+        }
+      },
+      {
+        root: null,
+        rootMargin: "300px",
+        threshold: 0,
+      },
+    );
+
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasMore, isLoading, currentPage, categorySlug, urlSearchTerm]);
 
   useEffect(() => {
     let ignore = false;
@@ -93,7 +199,9 @@ export function HomePage() {
 
         if (!ignore) {
           setFavoriteProductIds(
-            new Set(favorites.map((favorite) => favorite.productId)),
+            new Set(
+              favorites.map((favorite) => favorite.productId),
+            ),
           );
         }
       } catch {
@@ -124,27 +232,11 @@ export function HomePage() {
     };
   }, [toastMessage]);
 
-  const visibleProducts = useMemo(() => {
-    const normalizedSearch = urlSearchTerm.trim().toLowerCase();
 
-    if (!normalizedSearch) {
-      return products;
-    }
 
-    return products.filter((product) => {
-      const searchableText = [
-        product.nombre,
-        product.descripcion ?? "",
-        product.marca ?? "",
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      return searchableText.includes(normalizedSearch);
-    });
-  }, [products, urlSearchTerm]);
-
-  function handleSearchSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSearchSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
 
     const nextParams = new URLSearchParams(searchParams);
@@ -163,8 +255,13 @@ export function HomePage() {
     if (!getCustomerToken()) {
       navigate("/login", {
         state: {
-          from: `/${searchParams.toString() ? `?${searchParams.toString()}` : ""}`,
-          message: "Inicia sesión para guardar productos en favoritos.",
+          from: `/${
+            searchParams.toString()
+              ? `?${searchParams.toString()}`
+              : ""
+          }`,
+          message:
+            "Inicia sesión para guardar productos en favoritos.",
         },
       });
       return;
@@ -186,7 +283,9 @@ export function HomePage() {
         });
 
         setToastVariant("success");
-        setToastMessage(`${product.nombre} fue quitado de favoritos.`);
+        setToastMessage(
+          `${product.nombre} fue quitado de favoritos.`,
+        );
       } else {
         await addFavorite(product.id);
 
@@ -197,7 +296,9 @@ export function HomePage() {
         });
 
         setToastVariant("success");
-        setToastMessage(`${product.nombre} fue agregado a favoritos.`);
+        setToastMessage(
+          `${product.nombre} fue agregado a favoritos.`,
+        );
       }
     } catch (error) {
       const message =
@@ -205,7 +306,7 @@ export function HomePage() {
           ? error.message
           : isAlreadyFavorite
             ? "No fue posible quitar el producto de favoritos."
-            : "No fue posible agregar el producto a favoritos.";
+            : "No fue posible agregar el producto de favoritos.";
 
       setToastVariant("error");
       setToastMessage(message);
@@ -214,80 +315,151 @@ export function HomePage() {
     }
   }
 
+  const [togglingFavoriteProductId, setTogglingFavoriteProductId] =
+    useState<number | null>(null);
+
   return (
     <main className="page">
       <section className="hero">
         <div>
-          <p className="hero__eyebrow">Belleza y cuidado personal</p>
+          <p className="hero__eyebrow">
+            Belleza y cuidado personal
+          </p>
+
           <h1 className="hero__title">
             Productos seleccionados para tu rutina diaria
           </h1>
+
           <p className="hero__text">
-            Explora productos disponibles, guárdalos en favoritos y arma tu
-            pedido para enviarlo por WhatsApp.
+            Explora productos disponibles, guárdalos en favoritos y
+            arma tu pedido para enviarlo por WhatsApp.
           </p>
         </div>
       </section>
 
-      <section className="catalog-section" aria-labelledby="catalog-title">
+      <section
+        className="catalog-section"
+        aria-labelledby="catalog-title"
+      >
         <div className="section-heading">
           <div>
-            <p className="section-heading__eyebrow">Catálogo</p>
-            <h2 id="catalog-title" className="section-heading__title">
+            <p className="section-heading__eyebrow">
+              Catálogo
+            </p>
+
+            <h2
+              id="catalog-title"
+              className="section-heading__title"
+            >
               Productos disponibles
             </h2>
 
             {categorySlug ? (
               <div className="catalog-active-filter">
-                <span>Categoría: {categorySlug}</span>
-                <Link to="/">Quitar filtro</Link>
+                <span>
+                  Categoría: {categorySlug}
+                </span>
+
+                <Link to="/">
+                  Quitar filtro
+                </Link>
               </div>
             ) : null}
           </div>
 
-          <form className="catalog-search" onSubmit={handleSearchSubmit}>
+          <form
+            className="catalog-search"
+            onSubmit={handleSearchSubmit}
+          >
             <input
               className="catalog-search__input"
               type="search"
               placeholder="Buscar por nombre o marca"
               value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
+              onChange={(event) =>
+                setSearchTerm(event.target.value)
+              }
             />
-            <button className="catalog-search__button" type="submit">
+
+            <button
+              className="catalog-search__button"
+              type="submit"
+            >
               Buscar
             </button>
           </form>
         </div>
 
         {isLoading ? (
-          <div className="state-box">Cargando productos...</div>
+          <div className="state-box">
+            Cargando productos...
+          </div>
         ) : null}
 
-        {errorMessage ? (
+        {errorMessage && !isLoadingMore ? (
           <div className="state-box state-box--error">
-            <strong>No pudimos cargar el catálogo.</strong>
+            <strong>
+              No pudimos cargar el catálogo.
+            </strong>
+
             <span>{errorMessage}</span>
           </div>
         ) : null}
 
-        {!isLoading && !errorMessage && visibleProducts.length === 0 ? (
+        {!isLoading &&
+        !errorMessage &&
+        products.length === 0 ? (
           <div className="state-box">
             No hay productos disponibles para esta búsqueda.
           </div>
         ) : null}
 
-        {!isLoading && !errorMessage && visibleProducts.length > 0 ? (
-          <div className="product-grid">
-            {visibleProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                isFavorite={favoriteProductIds.has(product.id)}
-                isTogglingFavorite={togglingFavoriteProductId === product.id}
-                onToggleFavorite={handleToggleFavorite}
-              />
-            ))}
-          </div>
+        {!isLoading &&
+        !errorMessage &&
+        products.length > 0 ? (
+          <>
+            <div className="product-grid">
+              {products.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  isFavorite={favoriteProductIds.has(product.id)}
+                  isTogglingFavorite={
+                    togglingFavoriteProductId === product.id
+                  }
+                  onToggleFavorite={handleToggleFavorite}
+                />
+              ))}
+            </div>
+
+            {hasMore ? (
+              <div
+                ref={loadMoreRef}
+                className="catalog-load-more"
+                aria-live="polite"
+              >
+                {isLoadingMore ? (
+                  <div className="catalog-loading-indicator">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            {loadMoreErrorMessage ? (
+              <div className="state-box state-box--error">
+                <strong>
+                  No pudimos cargar más productos.
+                </strong>
+
+                <span>{loadMoreErrorMessage}</span>
+              </div>
+            ) : null}
+
+            
+          </>
         ) : null}
       </section>
 

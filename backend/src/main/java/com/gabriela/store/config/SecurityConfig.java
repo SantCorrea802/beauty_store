@@ -31,7 +31,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/auth/customers/reset-password").permitAll()
                         .requestMatchers("/api/health").permitAll()
 
-                        .requestMatchers("/api/categories/**").permitAll()
+                        .requestMatchers("/api/categories", "/api/categories/**").permitAll()
                         .requestMatchers("/api/products/**").permitAll()
 
                         .requestMatchers(HttpMethod.POST, "/api/auth/admin/invitations/accept").permitAll()
