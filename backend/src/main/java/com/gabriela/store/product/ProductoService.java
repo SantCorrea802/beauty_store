@@ -23,6 +23,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.gabriela.store.product.dto.ProductVariantRequest;
 import com.gabriela.store.product.dto.ProductVariantResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -63,23 +65,41 @@ public class ProductoService {
         this.imagenProductoRepository = imagenProductoRepository;
         this.productoVarianteRepository = productoVarianteRepository;
     }
-    // el siguiente metodo devuelve los productos activos
+
     @Transactional(readOnly = true)
-    public List<ProductResponse> findAllActive() {
-        return productoRepository.findByActivoTrue()
-                .stream()
-                .map(this::toSummaryResponse)
-                .toList();
+    public Page<ProductResponse> findActiveProducts(
+            String categorySlug,
+            String search,
+            Pageable pageable
+    ) {
+        String normalizedCategory = normalizeFilter(categorySlug);
+        String searchPattern = buildSearchPattern(search);
+
+        return productoRepository
+                .findActiveProducts(
+                        normalizedCategory,
+                        searchPattern,
+                        pageable
+                )
+                .map(this::toSummaryResponse);
     }
 
-    //el siguiente metodo devuelve los productos activos por categoria, recibe el slug de la categoria como parametro
-    @Transactional(readOnly = true)
-    public List<ProductResponse> findAllActiveByCategory(String categorySlug) {
-        return productoRepository.findActiveByCategorySlug(categorySlug)
-                .stream()
-                .map(this::toSummaryResponse)
-                .toList();
+    private String normalizeFilter(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+
+        return value.trim();
     }
+
+    private String buildSearchPattern(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+
+        return "%" + value.trim().toLowerCase(Locale.ROOT) + "%";
+    }
+
 
 
     // este metodo devuelve un producto por su slug, si el producto no existe o no esta activo, lanza una excepcion
