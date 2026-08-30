@@ -29,7 +29,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/auth/customers/resend-verification").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/customers/forgot-password").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/customers/reset-password").permitAll()
-                        .requestMatchers("/api/health").permitAll()
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/health",
+                                "/api/health/db"
+                        ).permitAll()
 
                         .requestMatchers("/api/categories", "/api/categories/**").permitAll()
                         .requestMatchers("/api/products/**").permitAll()
