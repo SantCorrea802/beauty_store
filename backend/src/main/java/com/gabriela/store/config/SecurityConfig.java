@@ -35,6 +35,12 @@ public class SecurityConfig {
                                 "/api/health/db"
                         ).permitAll()
 
+                        .requestMatchers(
+                                HttpMethod.HEAD,
+                                "/api/health",
+                                "/api/health/db"
+                        ).permitAll()
+
                         .requestMatchers("/api/categories", "/api/categories/**").permitAll()
                         .requestMatchers("/api/products/**").permitAll()
 
