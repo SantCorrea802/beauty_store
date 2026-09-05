@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   clearMyCart,
@@ -9,6 +9,8 @@ import {
   type Cart,
   type CartItem,
 } from "../../api/cartApi";
+
+const ITEMS_PER_BATCH = 10;
 
 const currencyFormatter = new Intl.NumberFormat("es-CO", {
   style: "currency",
@@ -47,6 +49,8 @@ export function CustomerCartPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [whatsAppUrl, setWhatsAppUrl] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState(ITEMS_PER_BATCH);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -61,6 +65,7 @@ export function CustomerCartPage() {
         if (!ignore) {
           setCart(response);
           setQuantityInputs(buildQuantityInputState(response.items));
+          setVisibleCount(ITEMS_PER_BATCH);
         }
       } catch (error) {
         if (!ignore) {
@@ -303,6 +308,37 @@ export function CustomerCartPage() {
 
 
   const hasItems = Boolean(cart && cart.items.length > 0);
+  const visibleItems = cart?.items.slice(0, visibleCount) ?? [];
+  const hasMoreItems = Boolean(cart && visibleCount < cart.items.length);
+
+  useEffect(() => {
+    const element = loadMoreRef.current;
+
+    if (!element || !hasMoreItems || !cart) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleCount((current) =>
+            Math.min(current + ITEMS_PER_BATCH, cart.items.length),
+          );
+        }
+      },
+      {
+        root: null,
+        rootMargin: "300px",
+        threshold: 0,
+      },
+    );
+
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasMoreItems, cart]);
 
   return (
     <main className="page">
@@ -340,11 +376,15 @@ export function CustomerCartPage() {
         {!isLoading && !errorMessage && hasItems && cart ? (
           <div className="cart-layout">
             <div className="cart-list">
-              {cart.items.map((item) => (
+              {visibleItems.map((item) => (
                 <article className="cart-item" key={item.itemId}>
                   <Link className="cart-item__media" to={`/products/${item.slug}`}>
                     {item.imagenPrincipalUrl ? (
-                      <img src={item.imagenPrincipalUrl} alt={item.nombre} />
+                      <img
+                        src={item.imagenPrincipalUrl}
+                        alt={item.nombre}
+                        loading="lazy"
+                      />
                     ) : (
                       <span>Sin imagen</span>
                     )}
@@ -417,6 +457,19 @@ export function CustomerCartPage() {
                   </div>
                 </article>
               ))}
+              {hasMoreItems ? (
+                <div
+                  ref={loadMoreRef}
+                  className="catalog-load-more"
+                  aria-live="polite"
+                >
+                  <div className="catalog-loading-indicator">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <aside className="cart-summary">

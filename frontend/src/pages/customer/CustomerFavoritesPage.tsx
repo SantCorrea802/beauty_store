@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   getMyFavorites,
   removeFavorite,
   type FavoriteProduct,
 } from "../../api/favoritesApi";
+
+const ITEMS_PER_BATCH = 10;
 
 const currencyFormatter = new Intl.NumberFormat("es-CO", {
   style: "currency",
@@ -17,6 +19,8 @@ export function CustomerFavoritesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState(ITEMS_PER_BATCH);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -30,6 +34,7 @@ export function CustomerFavoritesPage() {
 
         if (!ignore) {
           setFavorites(response);
+          setVisibleCount(ITEMS_PER_BATCH);
         }
       } catch (error) {
         if (!ignore) {
@@ -53,6 +58,41 @@ export function CustomerFavoritesPage() {
       ignore = true;
     };
   }, []);
+
+  const visibleFavorites = favorites.slice(0, visibleCount);
+  const hasMoreFavorites = visibleCount < favorites.length;
+
+  useEffect(() => {
+    const element = loadMoreRef.current;
+
+    if (!element || !hasMoreFavorites) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleCount((current) =>
+            Math.min(current + ITEMS_PER_BATCH, favorites.length),
+          );
+        }
+      },
+      {
+        root: null,
+        rootMargin: "300px",
+        threshold: 0,
+      },
+    );
+
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasMoreFavorites, favorites.length]);
+
+
+
 
   async function handleRemoveFavorite(productId: number) {
     try {
@@ -111,7 +151,7 @@ export function CustomerFavoritesPage() {
 
         {!isLoading && !errorMessage && favorites.length > 0 ? (
           <div className="favorite-list">
-            {favorites.map((favorite) => (
+            {visibleFavorites.map((favorite) => (
               <article className="favorite-item" key={favorite.favoriteId}>
                 <Link
                   className="favorite-item__media"
@@ -121,6 +161,7 @@ export function CustomerFavoritesPage() {
                     <img
                       src={favorite.imagenPrincipalUrl}
                       alt={favorite.nombre}
+                      loading="lazy"
                     />
                   ) : (
                     <span>Sin imagen</span>
@@ -156,6 +197,19 @@ export function CustomerFavoritesPage() {
                 </div>
               </article>
             ))}
+            {hasMoreFavorites ? (
+              <div
+                ref={loadMoreRef}
+                className="catalog-load-more"
+                aria-live="polite"
+              >
+                <div className="catalog-loading-indicator">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </section>

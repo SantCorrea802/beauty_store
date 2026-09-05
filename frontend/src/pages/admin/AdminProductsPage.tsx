@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   activateAdminProduct,
@@ -6,6 +6,8 @@ import {
   getAdminProducts,
   type AdminProduct,
 } from "../../api/adminProductsApi";
+
+const ITEMS_PER_BATCH = 10;
 
 const currencyFormatter = new Intl.NumberFormat("es-CO", {
   style: "currency",
@@ -19,6 +21,8 @@ export function AdminProductsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [actionProductId, setActionProductId] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState(ITEMS_PER_BATCH);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const filteredProducts = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -35,6 +39,38 @@ export function AdminProductsPage() {
       );
     });
   }, [products, searchTerm]);
+
+  const visibleProducts = filteredProducts.slice(0, visibleCount);
+  const hasMoreProducts = visibleCount < filteredProducts.length;
+
+  useEffect(() => {
+    const element = loadMoreRef.current;
+
+    if (!element || !hasMoreProducts) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleCount((current) =>
+            Math.min(current + ITEMS_PER_BATCH, filteredProducts.length),
+          );
+        }
+      },
+      {
+        root: null,
+        rootMargin: "300px",
+        threshold: 0,
+      },
+    );
+
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [hasMoreProducts, filteredProducts.length]);
 
   async function loadProducts() {
     try {
@@ -137,7 +173,10 @@ export function AdminProductsPage() {
           <input
             type="search"
             value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
+            onChange={(event) => {
+              setSearchTerm(event.target.value);
+              setVisibleCount(ITEMS_PER_BATCH);
+            }}
             placeholder="Nombre, marca o slug"
           />
         </label>
@@ -168,7 +207,7 @@ export function AdminProductsPage() {
               <span>Acciones</span>
             </div>
 
-            {filteredProducts.map((product) => (
+            {visibleProducts.map((product) => (
               <article className="admin-products-table__row" key={product.id}>
                 <div className="admin-product-cell">
                   <div className="admin-product-cell__image">
@@ -176,6 +215,7 @@ export function AdminProductsPage() {
                       <img
                         src={product.imagenPrincipalUrl}
                         alt={product.nombre}
+                        loading="lazy"
                       />
                     ) : (
                       <span>Sin imagen</span>
@@ -231,6 +271,19 @@ export function AdminProductsPage() {
                 </div>
               </article>
             ))}
+            {hasMoreProducts ? (
+              <div
+                ref={loadMoreRef}
+                className="catalog-load-more"
+                aria-live="polite"
+              >
+                <div className="catalog-loading-indicator">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+              </div>
+            ) : null}
           </div>
         </section>
       ) : null}
